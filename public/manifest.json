@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Lichess Self Sabotage",
+  "version": "1.0",
+  "description": "A for-fun Lichess extension that makes your ongoing chess games more challenging, by periodically intercepting and disallowing you from making the best moves.",
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  },
+  "permissions": ["activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["*://lichess.org/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}
