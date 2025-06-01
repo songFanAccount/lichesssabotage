@@ -1,54 +1,21 @@
-# React + TypeScript + Vite
+Observer mutations behaviour when 0. Clicking somewhere on board with no elements, or, clicking the opponent's pieces: Nothing
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+1. Nothing selected -> selecting a piece:
+   Adds a square.selected
+   For each available move of that piece, add a square.move-dest
+2. A piece selected -> clicking the same piece:
+   Removes the square.selected
+   Remove all square.move-dest
+3. A piece selected -> clicking another piece:
+   square.selected changes but isnt notified
+   If the number of available moves is the same, square.move-dest changes are not notified
+   -> Assumption: Internal code simply updates the transform of move-dests
+   If the number of available moves changes, square.move-dest are added/removed
 
-Currently, two official plugins are available:
+POSSIBLY CAUSES ISSUES:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Clicking another square isn't accurate recorded by this observer, further steps required to observe new move-dests.
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+4. A move was made:
+   The square.selected element is removed
+   All square.move-dest els are removed
