@@ -13,6 +13,12 @@ async function waitForBoard(): Promise<HTMLElement> {
   }
 }
 
+function blockMove(event: MouseEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+  console.log("Blocking move..");
+}
+
 (async () => {
   if (window.location.hostname.includes("lichess.org")) {
     console.log("🎯 We’re on Lichess!");
@@ -28,6 +34,7 @@ async function waitForBoard(): Promise<HTMLElement> {
           const nodeEl = node as HTMLElement;
           if (nodeEl.classList.contains("move-dest")) {
             moveDests.add(nodeEl);
+            nodeEl.addEventListener("mousedown", blockMove);
             console.log("Added move-dest");
           }
           if (nodeEl.classList.contains("selected")) {
@@ -40,6 +47,7 @@ async function waitForBoard(): Promise<HTMLElement> {
           const nodeEl = node as HTMLElement;
           if (nodeEl.classList.contains("move-dest")) {
             moveDests.delete(nodeEl);
+            nodeEl.removeEventListener("mousedown", blockMove);
             console.log("Removed move-dest");
           }
           if (nodeEl.classList.contains("selected")) {
