@@ -1,3 +1,6 @@
+let squareDim = 10;
+let side = 0;
+let promotionPiece = "";
 async function waitForBoard(): Promise<HTMLElement> {
   while (true) {
     const board = document.querySelector("cg-board") as HTMLElement | null;
@@ -8,14 +11,7 @@ async function waitForBoard(): Promise<HTMLElement> {
   }
 }
 
-async function fetchGameMoves(): Promise<string | undefined> {
-  const urlMatch = window.location.pathname.match(/\/([a-zA-Z0-9]{8})(?:\/|$)/);
-  if (!urlMatch) {
-    console.log("❌ Couldn’t find a game ID in the URL!");
-    return undefined;
-  }
-  const gameId = urlMatch[1];
-  console.log("🎯 Detected game ID:", gameId);
+async function fetchGameMoves(gameId: string): Promise<string | undefined> {
   const apiUrl = `https://lichess.org/game/export/${gameId}`;
   try {
     const response = await fetch(apiUrl, {
@@ -35,6 +31,47 @@ async function fetchGameMoves(): Promise<string | undefined> {
   }
 }
 
+function getChessCoord(x: number, y: number): string {
+  // x determines file, y determines rank
+  const leftFile = side === 0 ? "a" : "h";
+  const xFile = String.fromCharCode(
+    leftFile.charCodeAt(0) + (side === 0 ? 1 : -1) * x
+  );
+  const yRank = side === 0 ? 8 - y : 1 + y;
+  return `${xFile}${yRank}`;
+}
+function lastMoveInUCI(
+  init: HTMLElement | undefined,
+  dest: HTMLElement | undefined
+): string | undefined {
+  if (!init || !dest) {
+    console.error("Expected non-null last move");
+    return undefined;
+  }
+  const initTransformXY = init.style.transform.match(
+    /translate\(([^,]+), ([^)]+)\)/
+  );
+  const destTransformXY = dest.style.transform.match(
+    /translate\(([^,]+), ([^)]+)\)/
+  );
+  if (!initTransformXY || !destTransformXY) {
+    console.error("Invalid transforms..?");
+    return undefined;
+  }
+  const initxPx = parseInt(initTransformXY[1]);
+  const inityPx = parseInt(initTransformXY[2]);
+  const initx = initxPx / squareDim;
+  const inity = inityPx / squareDim;
+  const initCoord = getChessCoord(initx, inity);
+  const destxPx = parseInt(destTransformXY[1]);
+  const destyPx = parseInt(destTransformXY[2]);
+  const destx = destxPx / squareDim;
+  const desty = destyPx / squareDim;
+  const destCoord = getChessCoord(destx, desty);
+  const uciStr = `${initCoord}${destCoord}${promotionPiece}`;
+  if (promotionPiece !== "") promotionPiece = "";
+  return uciStr;
+}
 function blockMove(event: MouseEvent, square: HTMLElement) {
   return;
   event.preventDefault();
@@ -44,12 +81,22 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
 
 (async () => {
   if (window.location.hostname.includes("lichess.org")) {
-    let moves = await fetchGameMoves();
-    if (moves === undefined) return;
+    const urlMatch = window.location.pathname.match(
+      /\/([a-zA-Z0-9]{8,12})(?:\/|$)/
+    );
+    if (!urlMatch) return;
+    let gameId = urlMatch[1].slice(0, 8);
+    let moves = await fetchGameMoves(gameId);
     const board = await waitForBoard();
+    const cgWrap = document.querySelector(".cg-wrap");
+    if (!cgWrap) return;
+    side = cgWrap.classList.contains("orientation-white") ? 0 : 1; // 0 for white, 1 for black
+    const yourTurnContainer = document.querySelector(
+      "div.rclock.rclock-turn.rclock-bottom"
+    ) as HTMLElement;
+    if (!board || !yourTurnContainer) return;
     console.log(moves);
-    let squareDim = board.offsetHeight / 8;
-    console.log(squareDim);
+    squareDim = board.offsetHeight / 8;
     function updateSquareDim() {
       squareDim = board.offsetHeight / 8;
     }
@@ -84,7 +131,22 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
       lastMoves.length === 0
         ? [undefined, undefined]
         : [lastMoves[1] as HTMLElement, lastMoves[0] as HTMLElement];
-    console.log("Init last moves:", lastMove);
+    const yourTurnObserver = new MutationObserver((mutationsList) => {
+      const mutation = mutationsList[0];
+      const lastMoves = board.querySelectorAll("square.last-move");
+      lastMoves.forEach((lmove) => {
+        const lmoveEl = lmove as HTMLElement;
+        lastMove[firstLastMove ? 1 : 0] = lmoveEl;
+        firstLastMove = !firstLastMove;
+      });
+      const lastMoveStr = lastMoveInUCI(lastMove[0], lastMove[1]);
+      console.log(
+        (mutation.addedNodes.length === 1 ? "Your turn!" : "Opponent's turn!") +
+          " " +
+          lastMoveStr
+      );
+    });
+    yourTurnObserver.observe(yourTurnContainer, { childList: true });
     const observer = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {
         const addedNodes = mutation.addedNodes;
@@ -99,11 +161,16 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
               blockMove(event, nodeEl)
             );
           }
-          if (nodeEl.classList.contains("last-move")) {
-            lastMove[firstLastMove ? 1 : 0] = nodeEl;
-            if (!firstLastMove) console.log(lastMove);
-            firstLastMove = !firstLastMove;
-          }
+          if (nodeEl.tagName === "PIECE") {
+            // Should be a promotion piece
+            const classList = nodeEl.classList;
+            promotionPiece = "";
+            if (classList.contains("queen")) promotionPiece = "q";
+            else if (classList.contains("rook")) promotionPiece = "r";
+            else if (classList.contains("knight")) promotionPiece = "k";
+            else if (classList.contains("bishop")) promotionPiece = "b";
+            console.log("Promoting -> " + promotionPiece);
+          } else promotionPiece = "";
         });
         const removedNodes = mutation.removedNodes;
         removedNodes.forEach((node) => {
