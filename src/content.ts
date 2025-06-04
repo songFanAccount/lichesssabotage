@@ -103,7 +103,6 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
         console.error("Error loading moves...");
         return;
       }
-      console.log("After load, FEN = " + chessjs.fen());
       movelistObserver.observe(l4x, { childList: true });
     }
     const board = await waitForBoard();
@@ -134,9 +133,10 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
     let selectedEl: HTMLElement | undefined = undefined;
     const moveDests = new Set<HTMLElement>();
     async function updateBestmove(fen: string) {
+      const start = Date.now();
+      console.log("Thinking...");
       bestMove = await getBestMove(fen);
       const bestMoveInLan = bestMove.bestmove.split(" ")[1];
-      console.log(bestMoveInLan);
       const bestMoveStartCoord = bestMoveInLan.slice(0, 2);
       bestMoveEndCoord = bestMoveInLan.slice(2, 4);
       if (!bestMoveStartCoord || !bestMoveEndCoord) {
@@ -146,6 +146,9 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
       const bestMoveStartXY = getXYCoordAtCoord(bestMoveStartCoord);
       bestMoveStartX = bestMoveStartXY[0];
       bestMoveStartY = bestMoveStartXY[1];
+      const end = Date.now();
+      console.log(bestMoveInLan);
+      console.log(`Time taken: ${end - start}ms`);
     }
     // On load, if it is user's turn, update best move
     if (yourTurnContainer.childNodes.length > 0)
@@ -160,7 +163,6 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
             if (nodeEl.tagName === "KWDB") {
               const move = nodeEl.textContent?.trim();
               if (move) {
-                console.log(move);
                 const validMove = chessjs.move(move);
                 if (!validMove) {
                   console.error("Invalid move...");
