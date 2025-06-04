@@ -38,7 +38,7 @@ async function getBestMove(fen: string, depth: number = 15) {
   }
 }
 
-function getPieceAtCoord(coord: string): HTMLElement | undefined {
+function getXYCoordAtCoord(coord: string): [number, number] {
   const leftFile = side === 0 ? "a" : "h";
   const file = coord[0];
   const rank = parseInt(coord[1]);
@@ -47,21 +47,7 @@ function getPieceAtCoord(coord: string): HTMLElement | undefined {
       ? file.charCodeAt(0) - leftFile.charCodeAt(0)
       : leftFile.charCodeAt(0) - file.charCodeAt(0);
   const y = side === 0 ? 8 - rank : rank - 1;
-  console.log(`${x},${y}`);
-  const pieces = Array.from(document.querySelectorAll("piece"));
-  return pieces.find((piece) => {
-    const pieceEl = piece as HTMLElement;
-    const transformXY = pieceEl.style.transform.match(
-      /translate\(([^,]+), ([^)]+)\)/
-    );
-    if (transformXY) {
-      const xPx = parseInt(transformXY[1]);
-      const yPx = parseInt(transformXY[2]);
-      if (x * squareDim === xPx && y * squareDim === yPx) {
-        return piece;
-      }
-    }
-  }) as HTMLElement | undefined;
+  return [x, y];
 }
 function blockMove(event: MouseEvent, square: HTMLElement) {
   return;
@@ -142,9 +128,9 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
     // ALL GOOD TO GO
 
     let bestMove = null;
-    let bestMovePiece: HTMLElement | undefined = undefined;
-    let bestMoveSquare: HTMLElement | undefined = undefined;
-    if (bestMoveSquare) console.log(bestMoveSquare);
+    let bestMoveStartX: number | undefined = undefined;
+    let bestMoveStartY: number | undefined = undefined;
+    let bestMoveEndCoord: string | undefined = undefined;
     let selectedEl: HTMLElement | undefined = undefined;
     const moveDests = new Set<HTMLElement>();
     const yourTurnObserver = new MutationObserver(async (mutationsList) => {
@@ -172,14 +158,18 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
         bestMove = await getBestMove(chessjs.fen());
         const bestMoveInLan = bestMove.bestmove.split(" ")[1];
         console.log(bestMoveInLan);
-        const bestMoveStart = bestMoveInLan.slice(0, 2);
-        const bestMoveEnd = bestMoveInLan.slice(2, 4);
+        const bestMoveStartCoord = bestMoveInLan.slice(0, 2);
+        bestMoveEndCoord = bestMoveInLan.slice(2, 4);
+        if (!bestMoveStartCoord || !bestMoveEndCoord) {
+          console.error("Error parsing best move..?");
+          return;
+        }
         const promotedPiece =
           bestMoveInLan.length === 5 ? bestMoveInLan[4] : undefined;
-        console.log(bestMoveEnd);
+        const bestMoveStartXY = getXYCoordAtCoord(bestMoveStartCoord);
+        bestMoveStartX = bestMoveStartXY[0];
+        bestMoveStartY = bestMoveStartXY[1];
         if (promotedPiece) console.log(promotedPiece);
-        bestMovePiece = getPieceAtCoord(bestMoveStart);
-        console.log(bestMovePiece);
       }
     });
     yourTurnObserver.observe(yourTurnContainer, { childList: true });
@@ -212,10 +202,34 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
           }
         });
       });
-      console.log(selectedEl);
-      moveDests.forEach((dest) => {
-        dest.style.outline = "2px solid red";
-      });
+      if (bestMoveStartX && bestMoveStartY && bestMoveEndCoord && selectedEl) {
+        const selectedElXY = selectedEl.style.transform.match(
+          /translate\(([^,]+), ([^)]+)\)/
+        );
+        if (!selectedElXY) return;
+        const selectedXpx = parseInt(selectedElXY[1]);
+        const selectedYpx = parseInt(selectedElXY[2]);
+        if (
+          selectedXpx !== bestMoveStartX * squareDim ||
+          selectedYpx !== bestMoveStartY * squareDim
+        )
+          return; // If selected piece is not best piece, return
+        // Selected piece is the best piece to move
+        const xy = getXYCoordAtCoord(bestMoveEndCoord);
+        const x = xy[0];
+        const y = xy[1];
+        moveDests.forEach((dest) => {
+          const transformXY = dest.style.transform.match(
+            /translate\(([^,]+), ([^)]+)\)/
+          );
+          if (transformXY) {
+            const xPx = parseInt(transformXY[1]);
+            const yPx = parseInt(transformXY[2]);
+            const isBestSquare = x * squareDim === xPx && y * squareDim === yPx;
+            dest.style.outline = isBestSquare ? "2px solid red" : "none";
+          }
+        });
+      }
     });
     observer.observe(board, { childList: true });
   }
