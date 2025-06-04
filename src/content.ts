@@ -50,7 +50,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
   return [x, y];
 }
 function blockMove(event: MouseEvent, square: HTMLElement) {
-  return;
   event.preventDefault();
   event.stopPropagation();
   console.log("Blocking move..", square);
@@ -188,9 +187,6 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
           }
           if (nodeEl.classList.contains("move-dest")) {
             moveDests.add(nodeEl);
-            nodeEl.addEventListener("mousedown", (event) =>
-              blockMove(event, nodeEl)
-            );
           }
         });
         const removedNodes = mutation.removedNodes;
@@ -232,6 +228,13 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
             const yPx = parseInt(transformXY[2]);
             const isBestSquare = x * squareDim === xPx && y * squareDim === yPx;
             dest.style.outline = isBestSquare ? "2px solid red" : "none";
+            isBestSquare
+              ? dest.addEventListener("mousedown", (event) =>
+                  blockMove(event, dest)
+                )
+              : dest.removeEventListener("mousedown", (event) =>
+                  blockMove(event, dest)
+                );
           }
         });
       }
