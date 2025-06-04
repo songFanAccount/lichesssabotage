@@ -133,6 +133,23 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
     let bestMoveEndCoord: string | undefined = undefined;
     let selectedEl: HTMLElement | undefined = undefined;
     const moveDests = new Set<HTMLElement>();
+    async function updateBestmove(fen: string) {
+      bestMove = await getBestMove(fen);
+      const bestMoveInLan = bestMove.bestmove.split(" ")[1];
+      console.log(bestMoveInLan);
+      const bestMoveStartCoord = bestMoveInLan.slice(0, 2);
+      bestMoveEndCoord = bestMoveInLan.slice(2, 4);
+      if (!bestMoveStartCoord || !bestMoveEndCoord) {
+        console.error("Error parsing best move..?");
+        return;
+      }
+      const bestMoveStartXY = getXYCoordAtCoord(bestMoveStartCoord);
+      bestMoveStartX = bestMoveStartXY[0];
+      bestMoveStartY = bestMoveStartXY[1];
+    }
+    // On load, if it is user's turn, update best move
+    if (yourTurnContainer.childNodes.length > 0)
+      await updateBestmove(chessjs.fen());
     const yourTurnObserver = new MutationObserver(async (mutationsList) => {
       if (!l4x) {
         l4x = rm6.querySelector("l4x") as HTMLElement | undefined;
@@ -155,21 +172,7 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
       }
       if (mutationsList[0].addedNodes.length === 1) {
         // User's turn
-        bestMove = await getBestMove(chessjs.fen());
-        const bestMoveInLan = bestMove.bestmove.split(" ")[1];
-        console.log(bestMoveInLan);
-        const bestMoveStartCoord = bestMoveInLan.slice(0, 2);
-        bestMoveEndCoord = bestMoveInLan.slice(2, 4);
-        if (!bestMoveStartCoord || !bestMoveEndCoord) {
-          console.error("Error parsing best move..?");
-          return;
-        }
-        const promotedPiece =
-          bestMoveInLan.length === 5 ? bestMoveInLan[4] : undefined;
-        const bestMoveStartXY = getXYCoordAtCoord(bestMoveStartCoord);
-        bestMoveStartX = bestMoveStartXY[0];
-        bestMoveStartY = bestMoveStartXY[1];
-        if (promotedPiece) console.log(promotedPiece);
+        await updateBestmove(chessjs.fen());
       }
     });
     yourTurnObserver.observe(yourTurnContainer, { childList: true });
