@@ -49,10 +49,9 @@ function getXYCoordAtCoord(coord: string): [number, number] {
   const y = side === 0 ? 8 - rank : rank - 1;
   return [x, y];
 }
-function blockMove(event: MouseEvent, square: HTMLElement) {
+function blockMove(event: MouseEvent) {
   event.preventDefault();
   event.stopPropagation();
-  console.log("Blocking move..", square);
 }
 
 (async () => {
@@ -195,7 +194,7 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
           if (nodeEl.classList.contains("move-dest")) {
             moveDests.delete(nodeEl);
             nodeEl.removeEventListener("mousedown", (event) =>
-              blockMove(event, nodeEl)
+              blockMove(event)
             );
           }
           if (nodeEl.classList.contains("selected")) {
@@ -229,11 +228,9 @@ function blockMove(event: MouseEvent, square: HTMLElement) {
             const isBestSquare = x * squareDim === xPx && y * squareDim === yPx;
             dest.style.outline = isBestSquare ? "2px solid red" : "none";
             isBestSquare
-              ? dest.addEventListener("mousedown", (event) =>
-                  blockMove(event, dest)
-                )
+              ? dest.addEventListener("mousedown", (event) => blockMove(event))
               : dest.removeEventListener("mousedown", (event) =>
-                  blockMove(event, dest)
+                  blockMove(event)
                 );
           }
         });
