@@ -109,9 +109,6 @@ function blockMove(event: MouseEvent) {
       squareDim = board.offsetHeight / 8;
     }
     window.addEventListener("resize", updateSquareDim);
-    window.addEventListener("beforeunload", () => {
-      window.removeEventListener("resize", updateSquareDim);
-    });
     const cgWrap = document.querySelector(".cg-wrap") as
       | HTMLElement
       | undefined;
@@ -124,12 +121,70 @@ function blockMove(event: MouseEvent) {
 
     // ALL GOOD TO GO
 
+    let draggingPiece: HTMLElement | undefined = undefined;
+    const pieceObserver = new MutationObserver((mutationsList) => {
+      mutationsList.forEach((mutation) => {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "class"
+        ) {
+          const target = mutation.target as HTMLElement;
+          if (target.classList.contains("dragging")) {
+            draggingPiece = target;
+            console.log(draggingPiece);
+          } else {
+            if (draggingPiece && draggingPiece === target) {
+              console.log("dropped");
+              draggingPiece = undefined;
+            }
+          }
+        }
+      });
+    });
+    // REMINDER: DO THIS FOR NEW ADDED NODES VIA PROMOTION
+    board.querySelectorAll("piece").forEach((piece) => {
+      const pieceEl = piece as HTMLElement;
+      pieceObserver.observe(pieceEl, {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
+    });
     let bestMove = null;
     let bestMoveStartX: number | undefined = undefined;
     let bestMoveStartY: number | undefined = undefined;
     let bestMoveEndCoord: string | undefined = undefined;
     let selectedEl: HTMLElement | undefined = undefined;
     const moveDests = new Set<HTMLElement>();
+    let hoveredMoveDest: HTMLElement | undefined = undefined;
+    function boardMouseDown() {
+      hoveredMoveDest = undefined;
+    }
+    function blockDragMove(event: MouseEvent) {
+      if (
+        selectedEl &&
+        draggingPiece &&
+        hoveredMoveDest &&
+        bestMoveStartX &&
+        bestMoveStartY
+      ) {
+        console.log("mouseup", draggingPiece, hoveredMoveDest);
+        const selectedElXY = selectedEl.style.transform.match(
+          /translate\(([^,]+), ([^)]+)\)/
+        );
+        if (!selectedElXY) return;
+        const selectedXpx = parseInt(selectedElXY[1]);
+        const selectedYpx = parseInt(selectedElXY[2]);
+        if (
+          selectedXpx !== bestMoveStartX * squareDim ||
+          selectedYpx !== bestMoveStartY * squareDim
+        )
+          return; // If selected piece is not best piece, return
+        event.stopImmediatePropagation();
+        event.preventDefault();
+      }
+    }
+    board.addEventListener("mousedown", boardMouseDown, true);
+    board.addEventListener("mouseup", blockDragMove, true);
     async function updateBestmove(fen: string) {
       const start = Date.now();
       console.log("Thinking...");
@@ -175,6 +230,13 @@ function blockMove(event: MouseEvent) {
         await updateBestmove(chessjs.fen());
       }
     });
+    function onDestHover(node: HTMLElement) {
+      hoveredMoveDest = node;
+    }
+    function onDestUnhover(node: HTMLElement) {
+      if (hoveredMoveDest && hoveredMoveDest === node)
+        hoveredMoveDest = undefined;
+    }
     yourTurnObserver.observe(yourTurnContainer, { childList: true });
     const observer = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {
@@ -186,6 +248,8 @@ function blockMove(event: MouseEvent) {
           }
           if (nodeEl.classList.contains("move-dest")) {
             moveDests.add(nodeEl);
+            nodeEl.addEventListener("mouseenter", (_) => onDestHover(nodeEl));
+            nodeEl.addEventListener("mouseleave", (_) => onDestUnhover(nodeEl));
           }
         });
         const removedNodes = mutation.removedNodes;
@@ -195,6 +259,12 @@ function blockMove(event: MouseEvent) {
             moveDests.delete(nodeEl);
             nodeEl.removeEventListener("mousedown", (event) =>
               blockMove(event)
+            );
+            nodeEl.removeEventListener("mouseenter", (_) =>
+              onDestHover(nodeEl)
+            );
+            nodeEl.removeEventListener("mouseleave", (_) =>
+              onDestUnhover(nodeEl)
             );
           }
           if (nodeEl.classList.contains("selected")) {
@@ -237,5 +307,10 @@ function blockMove(event: MouseEvent) {
       }
     });
     observer.observe(board, { childList: true });
+    window.addEventListener("beforeunload", () => {
+      window.removeEventListener("resize", updateSquareDim);
+      board.removeEventListener("mouseup", blockDragMove, true);
+      board.removeEventListener("mousedown", boardMouseDown, true);
+    });
   }
 })();
