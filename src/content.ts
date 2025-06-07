@@ -3,6 +3,19 @@ import { Chess } from "chess.js";
 let side = 0;
 let squareDim = 0;
 
+// Timer
+let allowedToBlock = false;
+const timerDuration = 3000;
+let timerID: ReturnType<typeof setTimeout> | null = null;
+function startOrRefreshTimer() {
+  if (timerID !== null) {
+    clearTimeout(timerID);
+  }
+  allowedToBlock = false;
+  timerID = setTimeout(() => {
+    allowedToBlock = true;
+  }, timerDuration);
+}
 async function waitForBoard(): Promise<HTMLElement> {
   while (true) {
     const board = document.querySelector("cg-board") as HTMLElement | null;
@@ -143,6 +156,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
 
     // ALL GOOD TO GO
 
+    startOrRefreshTimer();
     let draggingPiece: HTMLElement | undefined = undefined;
     const pieceObserver = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {
@@ -161,7 +175,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         }
       });
     });
-    // REMINDER: DO THIS FOR NEW ADDED NODES VIA PROMOTION
     board.querySelectorAll("piece").forEach((piece) => {
       const pieceEl = piece as HTMLElement;
       pieceObserver.observe(pieceEl, {
@@ -215,9 +228,13 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       if (onlyOneMove()) {
         return;
       }
-      onBlock();
-      event.stopImmediatePropagation();
-      event.preventDefault();
+      if (allowedToBlock) {
+        onBlock();
+        event.stopImmediatePropagation();
+        event.preventDefault();
+      } else {
+        console.log("Saved by timer...");
+      }
     }
     function blockDragMove(event: MouseEvent) {
       if (onlyOneMove()) {
@@ -255,9 +272,13 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         ) {
           return; // If this move is not best move, return, don't block
         }
-        onBlock();
-        event.stopImmediatePropagation();
-        event.preventDefault();
+        if (allowedToBlock) {
+          onBlock();
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        } else {
+          console.log("Saved by timer...");
+        }
       }
     }
     board.addEventListener("mousedown", boardMouseDown, true);
@@ -338,6 +359,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       const bestMoveEndXY = getXYCoordAtCoord(bestMoveEndCoord);
       bestMoveEndX = bestMoveEndXY[0];
       bestMoveEndY = bestMoveEndXY[1];
+      updateMoveDestsForBlocking();
       const bestMoveIndex = bestMoves.length;
       bestMoves.push(bestMoveInLan);
       const end = Date.now();
@@ -351,9 +373,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         }
       }
     }
-    // On load, if it is user's turn, update best move
-    if (yourTurnContainer.childNodes.length > 0)
-      await updateBestmove(chessjs.fen());
     const yourTurnObserver = new MutationObserver(async (mutationsList) => {
       if (!l4x) {
         l4x = rm6.querySelector("l4x") as HTMLElement | undefined;
@@ -375,6 +394,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       }
       if (mutationsList[0].addedNodes.length === 1) {
         // User's turn
+        startOrRefreshTimer();
         await updateBestmove(chessjs.fen());
       }
     });
@@ -406,6 +426,12 @@ function getXYCoordAtCoord(coord: string): [number, number] {
               nodeEl.addEventListener("mouseenter", onDestHover);
               nodeEl.addEventListener("mouseleave", onDestUnhover);
             }
+            if (nodeEl.tagName === "PIECE") {
+              pieceObserver.observe(nodeEl, {
+                attributes: true,
+                attributeFilter: ["class"],
+              });
+            }
           });
           const removedNodes = mutation.removedNodes;
           removedNodes.forEach((node) => {
@@ -433,6 +459,9 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       attributes: true,
       attributeOldValue: true,
     });
+    // On load, if it is user's turn, update best move
+    if (yourTurnContainer.childNodes.length > 0)
+      await updateBestmove(chessjs.fen());
     window.addEventListener("beforeunload", () => {
       window.removeEventListener("resize", updateSquareDim);
       board.removeEventListener("mouseup", blockDragMove, true);
