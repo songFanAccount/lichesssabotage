@@ -2,6 +2,7 @@ import { Chess } from "chess.js";
 
 let side = 0;
 let squareDim = 0;
+
 async function waitForBoard(): Promise<HTMLElement> {
   while (true) {
     const board = document.querySelector("cg-board") as HTMLElement | null;
@@ -21,6 +22,13 @@ async function waitForRM6(): Promise<HTMLElement> {
   }
 }
 
+// function getXYFromTransform(transform: string): [number, number] | undefined {
+//   const transformXY = transform.match(/translate\(([^,]+), ([^)]+)\)/);
+//   if (!transformXY) return undefined;
+//   const xPx = parseInt(transformXY[1]);
+//   const yPx = parseInt(transformXY[2]);
+//   return [xPx / squareDim, yPx / squareDim];
+// }
 async function getBestMove(fen: string, depth: number = 15) {
   const url = `https://stockfish.online/api/s/v2.php?fen=${encodeURIComponent(
     fen
@@ -164,13 +172,15 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     let bestMove = null;
     let bestMoveStartX: number | undefined = undefined;
     let bestMoveStartY: number | undefined = undefined;
-    let bestMoveEndCoord: string | undefined = undefined;
+    let bestMoveEndX: number | undefined = undefined;
+    let bestMoveEndY: number | undefined = undefined;
     const bestMoves: (string | undefined)[] = [];
     function clearBestMove() {
       bestMove = null;
       bestMoveStartX = undefined;
       bestMoveStartY = undefined;
-      bestMoveEndCoord = undefined;
+      bestMoveEndX = undefined;
+      bestMoveEndY = undefined;
     }
     let selectedEl: HTMLElement | undefined = undefined;
     const moveDests = new Set<HTMLElement>();
@@ -192,29 +202,35 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       }
     }
     function onlyOneMove() {
-      return chessjs.moves().length <= 1;
+      const ret = chessjs.moves().length <= 1;
+      if (ret) {
+        console.log("Let you through because it's the only move...");
+      }
+      return ret;
+    }
+    function onBlock() {
+      console.log("Blocked :D");
     }
     function blockMove(event: MouseEvent) {
       if (onlyOneMove()) {
-        // console.log("only one move, no block");
         return;
       }
-      // console.log("blockMove");
+      onBlock();
       event.stopImmediatePropagation();
       event.preventDefault();
     }
     function blockDragMove(event: MouseEvent) {
       if (onlyOneMove()) {
-        // console.log("only one move, no block");
         return;
       }
       if (
         selectedEl &&
         draggingPiece &&
         hoveredMoveDest &&
-        bestMoveStartX &&
-        bestMoveStartY &&
-        bestMoveEndCoord
+        bestMoveStartX !== undefined &&
+        bestMoveStartY !== undefined &&
+        bestMoveEndX !== undefined &&
+        bestMoveEndY !== undefined
       ) {
         const selectedElXY = selectedEl.style.transform.match(
           /translate\(([^,]+), ([^)]+)\)/
@@ -230,9 +246,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         const hoveredMoveDestXY = hoveredMoveDest.style.transform.match(
           /translate\(([^,]+), ([^)]+)\)/
         );
-        const bestMoveEndXY = getXYCoordAtCoord(bestMoveEndCoord);
-        const bestMoveEndX = bestMoveEndXY[0];
-        const bestMoveEndY = bestMoveEndXY[1];
         if (!hoveredMoveDestXY) return;
         const hoveredXpx = parseInt(hoveredMoveDestXY[1]);
         const hoveredYpx = parseInt(hoveredMoveDestXY[2]);
@@ -242,13 +255,70 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         ) {
           return; // If this move is not best move, return, don't block
         }
-        // console.log("blockedDragMove");
+        onBlock();
         event.stopImmediatePropagation();
         event.preventDefault();
       }
     }
     board.addEventListener("mousedown", boardMouseDown, true);
     board.addEventListener("mouseup", blockDragMove, true);
+    function updateMoveDestsForBlocking() {
+      if (!selectedEl) return;
+      const selectedElXY = selectedEl.style.transform.match(
+        /translate\(([^,]+), ([^)]+)\)/
+      );
+      if (!selectedElXY) return;
+      const selectedXpx = parseInt(selectedElXY[1]);
+      const selectedYpx = parseInt(selectedElXY[2]);
+      const evaluated =
+        bestMoveStartX !== undefined &&
+        bestMoveStartY !== undefined &&
+        bestMoveEndX !== undefined &&
+        bestMoveEndY !== undefined;
+      let unblockAll = !evaluated;
+      if (
+        !unblockAll &&
+        bestMoveStartX !== undefined &&
+        bestMoveStartY !== undefined
+      ) {
+        if (
+          selectedXpx !== bestMoveStartX * squareDim ||
+          selectedYpx !== bestMoveStartY * squareDim
+        ) {
+          unblockAll = true;
+        }
+      }
+      moveDests.forEach((dest) => {
+        if (unblockAll) {
+          dest.style.outline = "none";
+          dest.removeEventListener("mousedown", blockMove);
+          dest.removeEventListener("mousedown", manualClickDestFunc);
+          return;
+        }
+        // If the position has been evaluated, and the selected piece is the best piece to move
+        const transformXY = dest.style.transform.match(
+          /translate\(([^,]+), ([^)]+)\)/
+        );
+        if (
+          !transformXY ||
+          bestMoveEndX === undefined ||
+          bestMoveEndY === undefined
+        )
+          return;
+        const xPx = parseInt(transformXY[1]);
+        const yPx = parseInt(transformXY[2]);
+        const isBestSquare =
+          bestMoveEndX * squareDim === xPx && bestMoveEndY * squareDim === yPx;
+        dest.style.outline = isBestSquare ? "2px solid red" : "none";
+        if (isBestSquare) {
+          dest.addEventListener("mousedown", blockMove);
+          dest.removeEventListener("mousedown", manualClickDestFunc);
+        } else {
+          dest.removeEventListener("mousedown", blockMove);
+          dest.addEventListener("mousedown", manualClickDestFunc);
+        }
+      });
+    }
     async function updateBestmove(fen: string) {
       const start = Date.now();
       console.log("Thinking...");
@@ -257,7 +327,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       if (!bestMove.bestmove) return;
       const bestMoveInLan = bestMove.bestmove.split(" ")[1];
       const bestMoveStartCoord = bestMoveInLan.slice(0, 2);
-      bestMoveEndCoord = bestMoveInLan.slice(2, 4);
+      const bestMoveEndCoord = bestMoveInLan.slice(2, 4);
       if (!bestMoveStartCoord || !bestMoveEndCoord) {
         console.error("Error parsing best move..?");
         return;
@@ -265,6 +335,9 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       const bestMoveStartXY = getXYCoordAtCoord(bestMoveStartCoord);
       bestMoveStartX = bestMoveStartXY[0];
       bestMoveStartY = bestMoveStartXY[1];
+      const bestMoveEndXY = getXYCoordAtCoord(bestMoveEndCoord);
+      bestMoveEndX = bestMoveEndXY[0];
+      bestMoveEndY = bestMoveEndXY[1];
       const bestMoveIndex = bestMoves.length;
       bestMoves.push(bestMoveInLan);
       const end = Date.now();
@@ -317,73 +390,49 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       }
     }
     yourTurnObserver.observe(yourTurnContainer, { childList: true });
-    const observer = new MutationObserver((mutationsList) => {
+    const boardObserver = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {
-        const addedNodes = mutation.addedNodes;
-        addedNodes.forEach((node) => {
-          const nodeEl = node as HTMLElement;
-          if (nodeEl.classList.contains("selected")) {
-            selectedEl = nodeEl;
-          }
-          if (nodeEl.classList.contains("move-dest")) {
-            moveDests.add(nodeEl);
-            nodeEl.addEventListener("mouseenter", onDestHover);
-            nodeEl.addEventListener("mouseleave", onDestUnhover);
-          }
-        });
-        const removedNodes = mutation.removedNodes;
-        removedNodes.forEach((node) => {
-          const nodeEl = node as HTMLElement;
-          if (nodeEl.classList.contains("move-dest")) {
-            moveDests.delete(nodeEl);
-            nodeEl.removeEventListener("mousedown", (event) =>
-              blockMove(event)
-            );
-            nodeEl.removeEventListener("mouseenter", onDestHover);
-            nodeEl.removeEventListener("mouseleave", onDestUnhover);
-          }
-          if (nodeEl.classList.contains("selected")) {
-            selectedEl = undefined;
-          }
-        });
-      });
-      if (bestMoveStartX && bestMoveStartY && bestMoveEndCoord && selectedEl) {
-        const selectedElXY = selectedEl.style.transform.match(
-          /translate\(([^,]+), ([^)]+)\)/
-        );
-        if (!selectedElXY) return;
-        const selectedXpx = parseInt(selectedElXY[1]);
-        const selectedYpx = parseInt(selectedElXY[2]);
-        if (
-          selectedXpx !== bestMoveStartX * squareDim ||
-          selectedYpx !== bestMoveStartY * squareDim
-        )
-          return; // If selected piece is not best piece, return
-        // Selected piece is the best piece to move
-        const xy = getXYCoordAtCoord(bestMoveEndCoord);
-        const x = xy[0];
-        const y = xy[1];
-        moveDests.forEach((dest) => {
-          const transformXY = dest.style.transform.match(
-            /translate\(([^,]+), ([^)]+)\)/
-          );
-          if (transformXY) {
-            const xPx = parseInt(transformXY[1]);
-            const yPx = parseInt(transformXY[2]);
-            const isBestSquare = x * squareDim === xPx && y * squareDim === yPx;
-            dest.style.outline = isBestSquare ? "2px solid red" : "none";
-            if (isBestSquare) {
-              dest.addEventListener("mousedown", blockMove);
-              dest.removeEventListener("mousedown", manualClickDestFunc);
-            } else {
-              dest.removeEventListener("mousedown", blockMove);
-              dest.addEventListener("mousedown", manualClickDestFunc);
+        if (mutation.type === "childList") {
+          const addedNodes = mutation.addedNodes;
+          addedNodes.forEach((node) => {
+            const nodeEl = node as HTMLElement;
+            if (nodeEl.classList.contains("selected")) {
+              // A PIECE WAS SELECTED
+              selectedEl = nodeEl;
             }
-          }
-        });
-      }
+            if (nodeEl.classList.contains("move-dest")) {
+              // A MOVE-DEST SQUARE WAS ADDED
+              moveDests.add(nodeEl);
+              nodeEl.addEventListener("mouseenter", onDestHover);
+              nodeEl.addEventListener("mouseleave", onDestUnhover);
+            }
+          });
+          const removedNodes = mutation.removedNodes;
+          removedNodes.forEach((node) => {
+            const nodeEl = node as HTMLElement;
+            if (nodeEl.classList.contains("move-dest")) {
+              //  A MOVE-DEST WAS REMOVED
+              moveDests.delete(nodeEl);
+              nodeEl.removeEventListener("mousedown", blockMove);
+              nodeEl.removeEventListener("mousedown", manualClickDestFunc);
+              nodeEl.removeEventListener("mouseenter", onDestHover);
+              nodeEl.removeEventListener("mouseleave", onDestUnhover);
+            }
+            if (nodeEl.classList.contains("selected")) {
+              // SELECTED PIECE -> UNSELECT
+              selectedEl = undefined;
+            }
+          });
+        }
+      });
+      updateMoveDestsForBlocking();
     });
-    observer.observe(board, { childList: true });
+    boardObserver.observe(board, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeOldValue: true,
+    });
     window.addEventListener("beforeunload", () => {
       window.removeEventListener("resize", updateSquareDim);
       board.removeEventListener("mouseup", blockDragMove, true);
