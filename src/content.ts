@@ -57,16 +57,35 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     if (!urlMatch) return;
     const rm6 = await waitForRM6();
     const chessjs = new Chess();
+    const userMoves: string[] = [];
+    async function updateUsermoveToUCI(moveIndex: number, fen: string) {
+      const moveInSan = userMoves[moveIndex];
+      const copyBoard = new Chess(fen);
+      const moveObj = copyBoard.move(moveInSan);
+      if (moveObj) {
+        const uci = moveObj.from + moveObj.to + (moveObj.promotion || "");
+        userMoves[moveIndex] = uci;
+        // console.log(`Updated user move ${moveIndex} to ${uci}`, userMoves);
+      }
+    }
     const movelistObserver = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
           const nodeEl = node as HTMLElement;
           if (nodeEl.tagName === "KWDB") {
             const move = nodeEl.textContent?.trim();
+            const copyBoardFen = chessjs.fen();
             if (move) {
+              const movingSide = chessjs.turn();
+              const isUserTurn =
+                (movingSide === "w" && side === 0) ||
+                (movingSide === "b" && side === 1);
               const validMove = chessjs.move(move);
               if (!validMove) {
                 console.error("Invalid move...");
+              } else if (isUserTurn) {
+                userMoves.push(move);
+                updateUsermoveToUCI(userMoves.length - 1, copyBoardFen);
               }
             }
           }
@@ -146,6 +165,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     let bestMoveStartX: number | undefined = undefined;
     let bestMoveStartY: number | undefined = undefined;
     let bestMoveEndCoord: string | undefined = undefined;
+    const bestMoves: (string | undefined)[] = [];
     function clearBestMove() {
       bestMove = null;
       bestMoveStartX = undefined;
@@ -176,16 +196,16 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     }
     function blockMove(event: MouseEvent) {
       if (onlyOneMove()) {
-        console.log("only one move, no block");
+        // console.log("only one move, no block");
         return;
       }
-      console.log("blockMove");
+      // console.log("blockMove");
       event.stopImmediatePropagation();
       event.preventDefault();
     }
     function blockDragMove(event: MouseEvent) {
       if (onlyOneMove()) {
-        console.log("only one move, no block");
+        // console.log("only one move, no block");
         return;
       }
       if (
@@ -222,7 +242,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         ) {
           return; // If this move is not best move, return, don't block
         }
-        console.log("blockedDragMove");
+        // console.log("blockedDragMove");
         event.stopImmediatePropagation();
         event.preventDefault();
       }
@@ -245,9 +265,18 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       const bestMoveStartXY = getXYCoordAtCoord(bestMoveStartCoord);
       bestMoveStartX = bestMoveStartXY[0];
       bestMoveStartY = bestMoveStartXY[1];
+      const bestMoveIndex = bestMoves.length;
+      bestMoves.push(bestMoveInLan);
       const end = Date.now();
-      console.log(bestMoveInLan);
       console.log(`Time taken: ${end - start}ms`);
+      if (bestMoveIndex < userMoves.length) {
+        console.log(
+          `Move ${bestMoveIndex}: Engine (${bestMoveInLan}), You (${userMoves[bestMoveIndex]})`
+        );
+        if (bestMoveInLan === userMoves[bestMoveIndex]) {
+          console.log("You beat the engine to this move!");
+        }
+      }
     }
     // On load, if it is user's turn, update best move
     if (yourTurnContainer.childNodes.length > 0)
