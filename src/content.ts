@@ -2,6 +2,52 @@ import { Chess } from "chess.js";
 
 let side = 0;
 let squareDim = 0;
+declare const chrome: any;
+let currentAudio: HTMLAudioElement | null = null;
+function playAudio(src: string) {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+  }
+  currentAudio = new Audio(chrome.runtime.getURL(src));
+  currentAudio.volume = 0.3;
+  currentAudio.play();
+}
+function spawnFallingImg(src: string, x: number, y: number) {
+  const shadowContainer = document.createElement("div");
+  shadowContainer.style.position = "fixed";
+  shadowContainer.style.left = "0";
+  shadowContainer.style.top = "0";
+  shadowContainer.style.width = "100%";
+  shadowContainer.style.height = "100%";
+  shadowContainer.style.pointerEvents = "none"; // So it doesn't block mouse clicks
+  shadowContainer.style.zIndex = "9999";
+
+  // Attach a shadow root
+  const shadow = shadowContainer.attachShadow({ mode: "open" });
+  document.body.appendChild(shadowContainer);
+
+  // Create the image inside the shadow root
+  const img = document.createElement("img");
+  img.src = chrome.runtime.getURL(src);
+  img.style.position = "absolute";
+  img.style.left = `${x}px`;
+  img.style.top = `${y + 15}px`;
+  img.style.width = `${squareDim}px`;
+  img.style.transition = "opacity 2s linear";
+  img.style.opacity = "1";
+
+  shadow.appendChild(img);
+
+  img.onload = () => {
+    requestAnimationFrame(() => {
+      img.style.opacity = "0";
+    });
+    setTimeout(() => {
+      shadowContainer.remove();
+    }, 2000);
+  };
+}
 
 // Timer
 let allowedToBlock = false;
@@ -34,14 +80,6 @@ async function waitForRM6(): Promise<HTMLElement> {
     await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 0.5 seconds
   }
 }
-
-// function getXYFromTransform(transform: string): [number, number] | undefined {
-//   const transformXY = transform.match(/translate\(([^,]+), ([^)]+)\)/);
-//   if (!transformXY) return undefined;
-//   const xPx = parseInt(transformXY[1]);
-//   const yPx = parseInt(transformXY[2]);
-//   return [xPx / squareDim, yPx / squareDim];
-// }
 async function getBestMove(fen: string, depth: number = 15) {
   const url = `https://stockfish.online/api/s/v2.php?fen=${encodeURIComponent(
     fen
@@ -222,7 +260,14 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       return ret;
     }
     function onBlock() {
-      console.log("Blocked :D");
+      playAudio("sounds/vine-boom.mp3");
+      const boardRect = board.getBoundingClientRect();
+      if (bestMoveEndX !== undefined && bestMoveEndY !== undefined)
+        spawnFallingImg(
+          "images/blankEmoji.png",
+          boardRect.left + bestMoveEndX * squareDim,
+          boardRect.top + bestMoveEndY * squareDim
+        );
     }
     function blockMove(event: MouseEvent) {
       if (onlyOneMove()) {
@@ -284,7 +329,9 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     board.addEventListener("mousedown", boardMouseDown, true);
     board.addEventListener("mouseup", blockDragMove, true);
     function updateMoveDestsForBlocking() {
-      if (!selectedEl) return;
+      if (!selectedEl) {
+        return;
+      }
       const selectedElXY = selectedEl.style.transform.match(
         /translate\(([^,]+), ([^)]+)\)/
       );
@@ -311,7 +358,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       }
       moveDests.forEach((dest) => {
         if (unblockAll) {
-          dest.style.outline = "none";
           dest.removeEventListener("mousedown", blockMove);
           dest.removeEventListener("mousedown", manualClickDestFunc);
           return;
@@ -330,7 +376,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         const yPx = parseInt(transformXY[2]);
         const isBestSquare =
           bestMoveEndX * squareDim === xPx && bestMoveEndY * squareDim === yPx;
-        dest.style.outline = isBestSquare ? "2px solid red" : "none";
         if (isBestSquare) {
           dest.addEventListener("mousedown", blockMove);
           dest.removeEventListener("mousedown", manualClickDestFunc);

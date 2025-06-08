@@ -22,5 +22,11 @@
     "16": "icon.png",
     "48": "icon.png",
     "128": "icon.png"
+  },
+  "web_accessible_resources": [
+  {
+    "resources": ["sounds/vine-boom.mp3", "images/blankEmoji.png"],
+    "matches": ["<all_urls>"]
   }
+]
 }
