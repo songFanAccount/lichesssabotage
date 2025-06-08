@@ -25,7 +25,7 @@
   },
   "web_accessible_resources": [
   {
-    "resources": ["sounds/vine-boom.mp3", "images/blankEmoji.png"],
+    "resources": ["sounds/vine-boom.mp3", "images/blank.png", "images/angry.png", "images/goofy.png", "images/sad.png"],
     "matches": ["<all_urls>"]
   }
 ]

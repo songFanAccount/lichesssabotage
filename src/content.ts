@@ -4,6 +4,9 @@ let side = 0;
 let squareDim = 0;
 declare const chrome: any;
 let currentAudio: HTMLAudioElement | null = null;
+let lastImgSrcIndex: number = 0;
+const imgSrcs = ["blank", "sad", "angry", "goofy"];
+const imgOffsets = [15, 15, 0, 0];
 function playAudio(src: string) {
   if (currentAudio) {
     currentAudio.pause();
@@ -13,26 +16,32 @@ function playAudio(src: string) {
   currentAudio.volume = 0.3;
   currentAudio.play();
 }
+let currentShadowContainer: HTMLDivElement | null = null;
+
 function spawnFallingImg(src: string, x: number, y: number) {
+  // Remove the previous image (if any)
+  if (currentShadowContainer) {
+    currentShadowContainer.remove();
+    currentShadowContainer = null;
+  }
+
   const shadowContainer = document.createElement("div");
   shadowContainer.style.position = "fixed";
   shadowContainer.style.left = "0";
   shadowContainer.style.top = "0";
   shadowContainer.style.width = "100%";
   shadowContainer.style.height = "100%";
-  shadowContainer.style.pointerEvents = "none"; // So it doesn't block mouse clicks
+  shadowContainer.style.pointerEvents = "none";
   shadowContainer.style.zIndex = "9999";
 
-  // Attach a shadow root
   const shadow = shadowContainer.attachShadow({ mode: "open" });
   document.body.appendChild(shadowContainer);
 
-  // Create the image inside the shadow root
   const img = document.createElement("img");
   img.src = chrome.runtime.getURL(src);
   img.style.position = "absolute";
   img.style.left = `${x}px`;
-  img.style.top = `${y + 15}px`;
+  img.style.top = `${y + imgOffsets[lastImgSrcIndex]}px`;
   img.style.width = `${squareDim}px`;
   img.style.transition = "opacity 2s linear";
   img.style.opacity = "1";
@@ -44,9 +53,16 @@ function spawnFallingImg(src: string, x: number, y: number) {
       img.style.opacity = "0";
     });
     setTimeout(() => {
-      shadowContainer.remove();
+      if (shadowContainer.parentNode) {
+        shadowContainer.remove();
+      }
+      if (currentShadowContainer === shadowContainer) {
+        currentShadowContainer = null;
+      }
     }, 2000);
   };
+
+  currentShadowContainer = shadowContainer;
 }
 
 // Timer
@@ -262,12 +278,16 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     function onBlock() {
       playAudio("sounds/vine-boom.mp3");
       const boardRect = board.getBoundingClientRect();
-      if (bestMoveEndX !== undefined && bestMoveEndY !== undefined)
+      if (bestMoveEndX !== undefined && bestMoveEndY !== undefined) {
         spawnFallingImg(
-          "images/blankEmoji.png",
+          `images/${imgSrcs[lastImgSrcIndex]}.png`,
           boardRect.left + bestMoveEndX * squareDim,
           boardRect.top + bestMoveEndY * squareDim
         );
+        const random3 = Math.floor(Math.random() * 3) + 1;
+        lastImgSrcIndex += random3;
+        if (lastImgSrcIndex > 3) lastImgSrcIndex -= 4;
+      }
     }
     function blockMove(event: MouseEvent) {
       if (onlyOneMove()) {
