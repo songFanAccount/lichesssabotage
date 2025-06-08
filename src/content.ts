@@ -290,11 +290,11 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       }
     }
     function blockMove(event: MouseEvent) {
-      if (onlyOneMove()) {
-        return;
-      }
       if (allowedToBlock) {
-        onBlock();
+        if (onlyOneMove()) {
+          return;
+        }
+        if (!draggingPiece) onBlock();
         event.stopImmediatePropagation();
         event.preventDefault();
       } else {
