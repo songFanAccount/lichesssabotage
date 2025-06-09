@@ -1,4 +1,7 @@
 import { Chess } from "chess.js";
+import { createRoot } from "react-dom/client";
+import { ExtensionDisplay } from "./components/ExtensionDisplay";
+import React from "react";
 
 let side = 0;
 let squareDim = 0;
@@ -18,7 +21,7 @@ function playAudio(src: string) {
 }
 let currentShadowContainer: HTMLDivElement | null = null;
 
-function spawnFallingImg(src: string, x: number, y: number) {
+function spawnFadingImg(src: string, x: number, y: number) {
   // Remove the previous image (if any)
   if (currentShadowContainer) {
     currentShadowContainer.remove();
@@ -166,6 +169,13 @@ function getXYCoordAtCoord(coord: string): [number, number] {
                 console.error("Invalid move...");
               } else if (isUserTurn) {
                 userMoves.push(move);
+                const temp = new CustomEvent("extension-stats-update", {
+                  detail: {
+                    moves: 10,
+                    captures: 2,
+                  },
+                });
+                window.dispatchEvent(temp);
                 updateUsermoveToUCI(userMoves.length - 1, copyBoardFen);
               }
             }
@@ -234,6 +244,15 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     // console.log(`Game is${isTimed ? " " : " not "}timed`);
     // ALL GOOD TO GO
 
+    const gameMeta = document.querySelector("div.game__meta");
+    if (gameMeta) {
+      const container = document.createElement("div");
+      container.id = "extension-root";
+      gameMeta.parentNode?.insertBefore(container, gameMeta.nextSibling);
+      const root = createRoot(container);
+      const display = React.createElement(ExtensionDisplay);
+      root.render(display);
+    }
     // console.log("Setting up observers...");
     startOrRefreshTimer();
     let draggingPiece: HTMLElement | undefined = undefined;
@@ -304,7 +323,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       playAudio("sounds/vine-boom.mp3");
       const boardRect = board.getBoundingClientRect();
       if (bestMoveEndX !== undefined && bestMoveEndY !== undefined) {
-        spawnFallingImg(
+        spawnFadingImg(
           `images/${imgSrcs[lastImgSrcIndex]}.png`,
           boardRect.left + bestMoveEndX * squareDim,
           boardRect.top + bestMoveEndY * squareDim
