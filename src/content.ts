@@ -65,6 +65,9 @@ function spawnFallingImg(src: string, x: number, y: number) {
   currentShadowContainer = shadowContainer;
 }
 
+function quitExtension() {
+  console.log("Quitting extension...");
+}
 // Timer
 let allowedToBlock = false;
 const timerDuration = 3000;
@@ -80,8 +83,10 @@ function startOrRefreshTimer() {
 }
 async function waitForBoard(): Promise<HTMLElement> {
   while (true) {
+    // console.log("waiting for board...");
     const board = document.querySelector("cg-board") as HTMLElement | null;
     if (board) {
+      // console.log("found board");
       return board; // Return the board when found
     }
     await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 0.5 seconds
@@ -126,10 +131,11 @@ function getXYCoordAtCoord(coord: string): [number, number] {
 }
 (async () => {
   if (window.location.hostname.includes("lichess.org")) {
-    const urlMatch = window.location.pathname.match(
-      /\/([a-zA-Z0-9]{8,12})(?:\/|$)/
-    );
-    if (!urlMatch) return;
+    const urlMatch = window.location.pathname.match(/\/([a-zA-Z0-9]+)(?:\/|$)/);
+    if (!urlMatch) {
+      quitExtension();
+      return;
+    }
     const rm6 = await waitForRM6();
     const chessjs = new Chess();
     const userMoves: string[] = [];
@@ -169,9 +175,9 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     });
     let l4x = rm6.querySelector("l4x") as HTMLElement | undefined;
     if (!l4x) {
-      console.log("No moves made yet...");
+      // console.log("No moves made yet...");
     } else {
-      console.log("Loading previous moves");
+      // console.log("Loading previous moves");
       let validLoad = true;
       l4x.childNodes.forEach((node) => {
         const nodeEl = node as HTMLElement;
@@ -188,6 +194,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       });
       if (!validLoad) {
         console.error("Error loading moves...");
+        quitExtension();
         return;
       }
       movelistObserver.observe(l4x, { childList: true });
@@ -201,15 +208,33 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     const cgWrap = document.querySelector(".cg-wrap") as
       | HTMLElement
       | undefined;
-    if (!cgWrap) return;
+    if (!cgWrap) {
+      console.log("Couldn't find cgWrap");
+      quitExtension();
+      return;
+    }
     side = cgWrap.classList.contains("orientation-white") ? 0 : 1;
+    /*
+    Your turn container:
+    - Always contains classes rclock and rclock-bottom
+    - IF unlimited time:
+      Has rclock-turn, has "Your turn" text if is your turn, otherwise no child nodes
+    - IF timed:
+      Has rclock-{side}, has div with class "time", when it is your turn, has class "running"
+    */
     const yourTurnContainer = document.querySelector(
-      "div.rclock.rclock-turn.rclock-bottom"
+      "div.rclock.rclock-bottom"
     ) as HTMLElement;
-    if (!board || !yourTurnContainer) return;
-
+    if (!yourTurnContainer) {
+      // console.log("Couldn't find yourTurnContainer");
+      quitExtension();
+      return;
+    }
+    const isTimed = !yourTurnContainer.classList.contains("rclock-turn");
+    // console.log(`Game is${isTimed ? " " : " not "}timed`);
     // ALL GOOD TO GO
 
+    // console.log("Setting up observers...");
     startOrRefreshTimer();
     let draggingPiece: HTMLElement | undefined = undefined;
     const pieceObserver = new MutationObserver((mutationsList) => {
@@ -457,11 +482,34 @@ function getXYCoordAtCoord(coord: string): [number, number] {
           });
         }
       }
-      if (mutationsList[0].addedNodes.length === 1) {
+      let justTurnedOurTurn = false;
+      mutationsList.forEach((mutation) => {
+        if (isTimed) {
+          if (mutation.attributeName === "class") {
+            const oldClasses = mutation.oldValue;
+            if (!oldClasses) return;
+            const oldRunning = oldClasses.includes("running");
+            if (
+              !oldRunning &&
+              (mutation.target as HTMLElement).classList.contains("running")
+            ) {
+              justTurnedOurTurn = true;
+            }
+          }
+        } else {
+          if (mutation.addedNodes.length === 1) justTurnedOurTurn = true;
+        }
+      });
+      if (justTurnedOurTurn) {
         // User's turn
         startOrRefreshTimer();
         await updateBestmove(chessjs.fen());
       }
+    });
+    yourTurnObserver.observe(yourTurnContainer, {
+      childList: true,
+      attributes: true,
+      attributeOldValue: true,
     });
     function onDestHover(event: MouseEvent) {
       hoveredMoveDest = event.target as HTMLElement;
@@ -474,7 +522,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         hoveredMoveDest = undefined;
       }
     }
-    yourTurnObserver.observe(yourTurnContainer, { childList: true });
     const boardObserver = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {
         if (mutation.type === "childList") {
@@ -527,6 +574,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     // On load, if it is user's turn, update best move
     if (yourTurnContainer.childNodes.length > 0)
       await updateBestmove(chessjs.fen());
+    // console.log("Extension set up!");
     window.addEventListener("beforeunload", () => {
       window.removeEventListener("resize", updateSquareDim);
       board.removeEventListener("mouseup", blockDragMove, true);
