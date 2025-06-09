@@ -149,12 +149,18 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       if (moveObj) {
         const uci = moveObj.from + moveObj.to + (moveObj.promotion || "");
         userMoves[moveIndex] = uci;
+        console.log(
+          `Move ${moveIndex}: Engine ${
+            moveIndex >= bestMoves.length ? "none" : bestMoves[moveIndex]
+          }, You: ${uci}`
+        );
+        console.log("Movelist", userMoves, bestMoves);
         // console.log(`Updated user move ${moveIndex} to ${uci}`, userMoves);
       }
     }
     const movelistObserver = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
+        mutation.addedNodes.forEach(async (node) => {
           const nodeEl = node as HTMLElement;
           if (nodeEl.tagName === "KWDB") {
             const move = nodeEl.textContent?.trim();
@@ -169,14 +175,16 @@ function getXYCoordAtCoord(coord: string): [number, number] {
                 console.error("Invalid move...");
               } else if (isUserTurn) {
                 userMoves.push(move);
-                const temp = new CustomEvent("extension-stats-update", {
+                const incMoveEvent = new CustomEvent("extension-stats-update", {
                   detail: {
-                    moves: 10,
-                    captures: 2,
+                    moves: userMoves.length,
                   },
                 });
-                window.dispatchEvent(temp);
+                window.dispatchEvent(incMoveEvent);
                 updateUsermoveToUCI(userMoves.length - 1, copyBoardFen);
+              } else {
+                startOrRefreshTimer();
+                await updateBestmove(chessjs.fen());
               }
             }
           }
@@ -240,7 +248,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       quitExtension();
       return;
     }
-    const isTimed = !yourTurnContainer.classList.contains("rclock-turn");
     // console.log(`Game is${isTimed ? " " : " not "}timed`);
     // ALL GOOD TO GO
 
@@ -254,7 +261,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       root.render(display);
     }
     // console.log("Setting up observers...");
-    startOrRefreshTimer();
     let draggingPiece: HTMLElement | undefined = undefined;
     const pieceObserver = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {
@@ -483,46 +489,44 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       }
     }
     const yourTurnObserver = new MutationObserver(async (mutationsList) => {
+      mutationsList.forEach((mutation) => console.log(mutation));
       if (!l4x) {
         l4x = rm6.querySelector("l4x") as HTMLElement | undefined;
         if (l4x) {
           movelistObserver.observe(l4x, { childList: true });
-          l4x.childNodes.forEach((node) => {
+          l4x.childNodes.forEach(async (node) => {
             const nodeEl = node as HTMLElement;
             if (nodeEl.tagName === "KWDB") {
               const move = nodeEl.textContent?.trim();
               if (move) {
+                const movingSide = chessjs.turn();
+                const copyBoardFen = chessjs.fen();
+                const userMadeFirstMove =
+                  (movingSide === "w" && side === 0) ||
+                  (movingSide === "b" && side === 1);
                 const validMove = chessjs.move(move);
                 if (!validMove) {
                   console.error("Invalid move...");
+                } else if (userMadeFirstMove) {
+                  userMoves.push(move);
+                  const incMoveEvent = new CustomEvent(
+                    "extension-stats-update",
+                    {
+                      detail: {
+                        moves: userMoves.length,
+                      },
+                    }
+                  );
+                  window.dispatchEvent(incMoveEvent);
+                  updateUsermoveToUCI(userMoves.length - 1, copyBoardFen);
+                } else {
+                  startOrRefreshTimer();
+                  await updateBestmove(chessjs.fen());
                 }
               }
             }
           });
         }
-      }
-      let justTurnedOurTurn = false;
-      mutationsList.forEach((mutation) => {
-        if (isTimed) {
-          if (mutation.attributeName === "class") {
-            const oldClasses = mutation.oldValue;
-            if (!oldClasses) return;
-            const oldRunning = oldClasses.includes("running");
-            if (
-              !oldRunning &&
-              (mutation.target as HTMLElement).classList.contains("running")
-            ) {
-              justTurnedOurTurn = true;
-            }
-          }
-        } else {
-          if (mutation.addedNodes.length === 1) justTurnedOurTurn = true;
-        }
-      });
-      if (justTurnedOurTurn) {
-        // User's turn
-        startOrRefreshTimer();
-        await updateBestmove(chessjs.fen());
       }
     });
     yourTurnObserver.observe(yourTurnContainer, {
@@ -591,8 +595,13 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       attributeOldValue: true,
     });
     // On load, if it is user's turn, update best move
-    if (yourTurnContainer.childNodes.length > 0)
+    const movingSide = chessjs.turn();
+    const isUserTurn =
+      (movingSide === "w" && side === 0) || (movingSide === "b" && side === 1);
+    if (isUserTurn) {
+      startOrRefreshTimer();
       await updateBestmove(chessjs.fen());
+    }
     // console.log("Extension set up!");
     window.addEventListener("beforeunload", () => {
       window.removeEventListener("resize", updateSquareDim);
