@@ -232,22 +232,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       return;
     }
     side = cgWrap.classList.contains("orientation-white") ? 0 : 1;
-    /*
-    Your turn container:
-    - Always contains classes rclock and rclock-bottom
-    - IF unlimited time:
-      Has rclock-turn, has "Your turn" text if is your turn, otherwise no child nodes
-    - IF timed:
-      Has rclock-{side}, has div with class "time", when it is your turn, has class "running"
-    */
-    const yourTurnContainer = document.querySelector(
-      "div.rclock.rclock-bottom"
-    ) as HTMLElement;
-    if (!yourTurnContainer) {
-      // console.log("Couldn't find yourTurnContainer");
-      quitExtension();
-      return;
-    }
     // console.log(`Game is${isTimed ? " " : " not "}timed`);
     // ALL GOOD TO GO
 
@@ -488,51 +472,53 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         }
       }
     }
-    const yourTurnObserver = new MutationObserver(async (mutationsList) => {
-      mutationsList.forEach((mutation) => console.log(mutation));
-      if (!l4x) {
-        l4x = rm6.querySelector("l4x") as HTMLElement | undefined;
-        if (l4x) {
-          movelistObserver.observe(l4x, { childList: true });
-          l4x.childNodes.forEach(async (node) => {
-            const nodeEl = node as HTMLElement;
-            if (nodeEl.tagName === "KWDB") {
-              const move = nodeEl.textContent?.trim();
-              if (move) {
-                const movingSide = chessjs.turn();
-                const copyBoardFen = chessjs.fen();
-                const userMadeFirstMove =
-                  (movingSide === "w" && side === 0) ||
-                  (movingSide === "b" && side === 1);
-                const validMove = chessjs.move(move);
-                if (!validMove) {
-                  console.error("Invalid move...");
-                } else if (userMadeFirstMove) {
-                  userMoves.push(move);
-                  const incMoveEvent = new CustomEvent(
-                    "extension-stats-update",
-                    {
-                      detail: {
-                        moves: userMoves.length,
-                      },
-                    }
-                  );
-                  window.dispatchEvent(incMoveEvent);
-                  updateUsermoveToUCI(userMoves.length - 1, copyBoardFen);
-                } else {
-                  startOrRefreshTimer();
-                  await updateBestmove(chessjs.fen());
+    const rm6observer = new MutationObserver((mutationsList) => {
+      if (l4x) return; // Only purpose of this observer is to observe for l4x
+      mutationsList.forEach((mutation) => {
+        const addedNodes = mutation.addedNodes;
+        addedNodes.forEach((node) => {
+          const nodeEl = node as HTMLElement;
+          if (nodeEl.tagName === "L4X") {
+            l4x = nodeEl;
+            movelistObserver.observe(l4x, { childList: true });
+            l4x.childNodes.forEach(async (node) => {
+              const nodeEl = node as HTMLElement;
+              if (nodeEl.tagName === "KWDB") {
+                const move = nodeEl.textContent?.trim();
+                if (move) {
+                  const movingSide = chessjs.turn();
+                  const copyBoardFen = chessjs.fen();
+                  const userMadeFirstMove =
+                    (movingSide === "w" && side === 0) ||
+                    (movingSide === "b" && side === 1);
+                  const validMove = chessjs.move(move);
+                  if (!validMove) {
+                    console.error("Invalid move...");
+                  } else if (userMadeFirstMove) {
+                    userMoves.push(move);
+                    const incMoveEvent = new CustomEvent(
+                      "extension-stats-update",
+                      {
+                        detail: {
+                          moves: userMoves.length,
+                        },
+                      }
+                    );
+                    window.dispatchEvent(incMoveEvent);
+                    updateUsermoveToUCI(userMoves.length - 1, copyBoardFen);
+                  } else {
+                    startOrRefreshTimer();
+                    await updateBestmove(chessjs.fen());
+                  }
                 }
               }
-            }
-          });
-        }
-      }
+            });
+          }
+        });
+      });
     });
-    yourTurnObserver.observe(yourTurnContainer, {
+    rm6observer.observe(rm6, {
       childList: true,
-      attributes: true,
-      attributeOldValue: true,
     });
     function onDestHover(event: MouseEvent) {
       hoveredMoveDest = event.target as HTMLElement;

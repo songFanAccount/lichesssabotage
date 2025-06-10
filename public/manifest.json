@@ -4,7 +4,6 @@
   "version": "1.0",
   "description": "A for-fun Lichess extension that makes your ongoing chess games more challenging, by periodically intercepting and disallowing you from making the best moves.",
   "action": {
-    "default_popup": "index.html",
     "default_icon": {
       "16": "icon.png",
       "48": "icon.png",
