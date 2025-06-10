@@ -2,6 +2,7 @@ import { Chess } from "chess.js";
 import { createRoot } from "react-dom/client";
 import { ExtensionDisplay } from "./components/ExtensionDisplay";
 import React from "react";
+import { ExtensionSettings } from "./components/ExtensionSettings";
 
 let side = 0;
 const userMoves: string[] = [];
@@ -242,6 +243,15 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         window.addEventListener("extension_display_ready", handler);
       });
     }
+    function waitForSettings(): Promise<Event> {
+      return new Promise((resolve) => {
+        const handler = (event: Event) => {
+          window.removeEventListener("extension_settings_ready", handler);
+          resolve(event);
+        };
+        window.addEventListener("extension_settings_ready", handler);
+      });
+    }
     const gameMeta = document.querySelector("div.game__meta");
     if (gameMeta) {
       const container = document.createElement("div");
@@ -258,6 +268,10 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       container.id = "extension-settings-root";
       container.textContent = "settings";
       underboard.append(container);
+      const root = createRoot(container);
+      const display = React.createElement(ExtensionSettings);
+      root.render(display);
+      await waitForSettings();
     }
     const movelistObserver = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {
