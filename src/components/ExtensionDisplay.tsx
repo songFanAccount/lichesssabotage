@@ -49,7 +49,7 @@ const titleStyle: React.CSSProperties = {
 const statItemStyle: React.CSSProperties = {
   backgroundColor: '#374151', // Gray-800
   borderRadius: '0.5rem',
-  padding: '1rem',
+  padding: '0.5rem',
   border: '1px solid #374151',
   marginBottom: '1rem'
 };
@@ -131,7 +131,7 @@ const percentageStyle: React.CSSProperties = {
 };
 
 export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
-  title = 'Lichess Sabotage Stats'
+  title = 'Sabotage Stats'
 }) => {
   const initStats = [
     { label: 'Total Moves Made', value: 0, icon: '♞' },
