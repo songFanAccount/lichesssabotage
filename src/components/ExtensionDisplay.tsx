@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Counter from './counter/Counter';
+import { ExtensionState } from './ExtensionState';
 
 /* 
 Stats:
@@ -36,7 +37,11 @@ const containerStyle: React.CSSProperties = {
 };
 
 const headerStyle: React.CSSProperties = {
-  marginBottom: '1.5rem'
+  marginBottom: '1.5rem',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  width: '100%'
 };
 
 const titleStyle: React.CSSProperties = {
@@ -144,8 +149,28 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
 
   const [stats, setStats] = useState<{ label: string; value: number; icon: string }[]>(initStats);
   const [lastActionWasBlock, setLastActionWasBlock] = useState<boolean>(false)
+  // const [isUsersTurn, setIsUsersTurn] = useState<boolean>(false)
+  // const [engineIsThinking, setEngineIsThinking] = useState<boolean>(false)
+  const [timeLeft, setTimeLeft] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
+  const startTimer = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    intervalRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev > 0) return prev - 1;
+        clearInterval(intervalRef.current!);
+        return 0;
+      });
+    }, 1000);
+  };
+
+  const resetTimer = () => {
+    setTimeLeft(3);
+    startTimer();
+  };
   // Calculate best moves made (sum of indices 3, 4, 5)
   const bestMovesMade = stats[3].value + stats[4].value + stats[5].value;
   
@@ -156,7 +181,13 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
   const bestMovesMadePercentage = totalMoves > 0 ? ((bestMovesMade / totalMoves) * 100).toFixed(1) : '0.0';
 
   useEffect(() => {
-    const handler = (e: CustomEvent) => {
+    const statusHandler = (e: CustomEvent) => {
+      const detail = e.detail
+      // if ('isUsersTurn' in detail) setIsUsersTurn(detail.isUsersTurn)
+      // if ('engineIsThinking' in detail) setEngineIsThinking(detail.engineIsThinking)
+      if ('restartTimer' in detail) resetTimer()
+    }
+    const moveHandler = (e: CustomEvent) => {
       const detail = e.detail;
       const newStats = stats.map(s => ({ ...s }));
       if ('numMoves' in detail) newStats[0].value = detail.numMoves;
@@ -170,9 +201,11 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
       if ('onlyMovesAllowed' in detail) newStats[5].value = detail.onlyMovesAllowed;
       setStats(newStats);
     };
-    window.addEventListener('extension-stats-update', handler as EventListener);
+    window.addEventListener('extension-stats-update', moveHandler as EventListener);
+    window.addEventListener('extension-status-update', statusHandler as EventListener);
     return () => {
-      window.removeEventListener('extension-stats-update', handler as EventListener);
+      window.removeEventListener('extension-stats-update', moveHandler as EventListener);
+      window.removeEventListener('extension-status-update', statusHandler as EventListener);
     };
   }, [stats]);
 
@@ -184,6 +217,7 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
     <div style={containerStyle}>
       <div style={headerStyle}>
         <h2 style={titleStyle}>{title}</h2>
+        <ExtensionState state="timer" timer={timeLeft}/>
       </div>
 
       <div>

@@ -154,6 +154,13 @@ function startOrRefreshTimer() {
   if (timerID !== null) {
     clearTimeout(timerID);
   }
+  window.dispatchEvent(
+    new CustomEvent("extension-status-update", {
+      detail: {
+        restartTimer: true,
+      },
+    })
+  );
   allowedToBlock = false;
   timerID = setTimeout(() => {
     allowedToBlock = true;
