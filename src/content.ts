@@ -17,7 +17,7 @@ function playAudio(src: string) {
     currentAudio.currentTime = 0;
   }
   currentAudio = new Audio(chrome.runtime.getURL(src));
-  currentAudio.volume = 0.3;
+  currentAudio.volume = 0.2;
   currentAudio.play();
 }
 let currentShadowContainer: HTMLDivElement | null = null;
@@ -89,6 +89,13 @@ function updateStats(data: any) {
     new CustomEvent("extension-stats-update", { detail: data })
   );
 }
+function updateStatus(data: any) {
+  window.dispatchEvent(
+    new CustomEvent("extension-status-update", {
+      detail: data,
+    })
+  );
+}
 function incNumMoves() {
   updateStats({ numMoves: userMoves.length });
 }
@@ -154,13 +161,9 @@ function startOrRefreshTimer() {
   if (timerID !== null) {
     clearTimeout(timerID);
   }
-  window.dispatchEvent(
-    new CustomEvent("extension-status-update", {
-      detail: {
-        restartTimer: true,
-      },
-    })
-  );
+  updateStatus({
+    restartTimer: true,
+  });
   allowedToBlock = false;
   timerID = setTimeout(() => {
     allowedToBlock = true;
@@ -168,10 +171,8 @@ function startOrRefreshTimer() {
 }
 async function waitForBoard(): Promise<HTMLElement> {
   while (true) {
-    // console.log("waiting for board...");
     const board = document.querySelector("cg-board") as HTMLElement | null;
     if (board) {
-      // console.log("found board");
       return board; // Return the board when found
     }
     await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 0.5 seconds
@@ -230,8 +231,33 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       if (moveObj) {
         const uci = moveObj.from + moveObj.to + (moveObj.promotion || "");
         userMoves[moveIndex] = uci;
-        // console.log(`Updated user move ${moveIndex} to ${uci}`, userMoves);
       }
+    }
+    function waitForDisplay(): Promise<Event> {
+      return new Promise((resolve) => {
+        const handler = (event: Event) => {
+          window.removeEventListener("extension_display_ready", handler);
+          resolve(event);
+        };
+        window.addEventListener("extension_display_ready", handler);
+      });
+    }
+    const gameMeta = document.querySelector("div.game__meta");
+    if (gameMeta) {
+      const container = document.createElement("div");
+      container.id = "extension-display-root";
+      gameMeta.parentNode?.insertBefore(container, gameMeta.nextSibling);
+      const root = createRoot(container);
+      const display = React.createElement(ExtensionDisplay);
+      root.render(display);
+      await waitForDisplay();
+    }
+    const underboard = document.querySelector("div.round__underboard");
+    if (underboard) {
+      const container = document.createElement("div");
+      container.id = "extension-settings-root";
+      container.textContent = "settings";
+      underboard.append(container);
     }
     const movelistObserver = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {
@@ -249,6 +275,9 @@ function getXYCoordAtCoord(coord: string): [number, number] {
                 console.error("Invalid move...");
               } else if (isUserTurn) {
                 userMoves.push(move);
+                updateStatus({
+                  isUsersTurn: false,
+                });
                 incNumMoves();
               } else {
                 startOrRefreshTimer();
@@ -260,10 +289,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       });
     });
     let l4x = rm6.querySelector("l4x") as HTMLElement | undefined;
-    if (!l4x) {
-      // console.log("No moves made yet...");
-    } else {
-      // console.log("Loading previous moves");
+    if (l4x) {
       let validLoad = true;
       l4x.childNodes.forEach((node) => {
         const nodeEl = node as HTMLElement;
@@ -295,7 +321,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       | HTMLElement
       | undefined;
     if (!cgWrap) {
-      console.log("Couldn't find cgWrap");
       quitExtension();
       return;
     }
@@ -303,16 +328,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
 
     // ALL GOOD TO GO
 
-    const gameMeta = document.querySelector("div.game__meta");
-    if (gameMeta) {
-      const container = document.createElement("div");
-      container.id = "extension-root";
-      gameMeta.parentNode?.insertBefore(container, gameMeta.nextSibling);
-      const root = createRoot(container);
-      const display = React.createElement(ExtensionDisplay);
-      root.render(display);
-    }
-    // console.log("Setting up observers...");
     let draggingPiece: HTMLElement | undefined = undefined;
     const pieceObserver = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {
@@ -508,8 +523,10 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       });
     }
     async function updateBestmove(fen: string) {
-      const start = Date.now();
-      console.log("Thinking...");
+      updateStatus({
+        isUsersTurn: true,
+        engineIsThinking: true,
+      });
       clearBestMove();
       bestMove = await getBestMove(fen);
       if (!bestMove.bestmove) return;
@@ -527,10 +544,11 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       bestMoveEndX = bestMoveEndXY[0];
       bestMoveEndY = bestMoveEndXY[1];
       updateMoveDestsForBlocking();
+      updateStatus({
+        engineIsThinking: false,
+      });
       const bestMoveIndex = bestMoves.length;
       bestMoves.push(bestMoveInLan);
-      const end = Date.now();
-      console.log(`Time taken: ${end - start}ms`);
       if (bestMoveIndex < userMoves.length) {
         updateUsermoveToUCI(bestMoveIndex, fen);
         if (
@@ -564,6 +582,9 @@ function getXYCoordAtCoord(coord: string): [number, number] {
                     console.error("Invalid move...");
                   } else if (userMadeFirstMove) {
                     userMoves.push(move);
+                    updateStatus({
+                      isUsersTurn: false,
+                    });
                     incNumMoves();
                   } else {
                     startOrRefreshTimer();
@@ -647,7 +668,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       startOrRefreshTimer();
       await updateBestmove(chessjs.fen());
     }
-    // console.log("Extension set up!");
     window.addEventListener("beforeunload", () => {
       window.removeEventListener("resize", updateSquareDim);
       board.removeEventListener("mouseup", blockDragMove, true);

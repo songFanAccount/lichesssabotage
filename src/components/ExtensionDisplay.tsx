@@ -149,9 +149,23 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
 
   const [stats, setStats] = useState<{ label: string; value: number; icon: string }[]>(initStats);
   const [lastActionWasBlock, setLastActionWasBlock] = useState<boolean>(false)
-  // const [isUsersTurn, setIsUsersTurn] = useState<boolean>(false)
-  // const [engineIsThinking, setEngineIsThinking] = useState<boolean>(false)
+  const [isUsersTurn, setIsUsersTurn] = useState<boolean>(false)
+  const [engineIsThinking, setEngineIsThinking] = useState<boolean>(false)
   const [timeLeft, setTimeLeft] = useState(0);
+  const state = 
+  !isUsersTurn
+  ?
+    "waiting"
+  :
+    engineIsThinking
+    ?
+      "calculating"
+    :
+      timeLeft > 0
+      ?
+        "timer"
+      :
+        "ready"
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -181,12 +195,9 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
   const bestMovesMadePercentage = totalMoves > 0 ? ((bestMovesMade / totalMoves) * 100).toFixed(1) : '0.0';
 
   useEffect(() => {
-    const statusHandler = (e: CustomEvent) => {
-      const detail = e.detail
-      // if ('isUsersTurn' in detail) setIsUsersTurn(detail.isUsersTurn)
-      // if ('engineIsThinking' in detail) setEngineIsThinking(detail.engineIsThinking)
-      if ('restartTimer' in detail) resetTimer()
-    }
+    window.dispatchEvent(new CustomEvent("extension_display_ready"))
+  }, [])
+  useEffect(() => {
     const moveHandler = (e: CustomEvent) => {
       const detail = e.detail;
       const newStats = stats.map(s => ({ ...s }));
@@ -202,13 +213,22 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
       setStats(newStats);
     };
     window.addEventListener('extension-stats-update', moveHandler as EventListener);
-    window.addEventListener('extension-status-update', statusHandler as EventListener);
     return () => {
       window.removeEventListener('extension-stats-update', moveHandler as EventListener);
-      window.removeEventListener('extension-status-update', statusHandler as EventListener);
     };
   }, [stats]);
-
+  useEffect(() => {
+    const statusHandler = (e: CustomEvent) => {
+      const detail = e.detail
+      if ('isUsersTurn' in detail) setIsUsersTurn(detail.isUsersTurn)
+      if ('engineIsThinking' in detail) setEngineIsThinking(detail.engineIsThinking)
+      if ('restartTimer' in detail) resetTimer()
+    }
+    window.addEventListener('extension-status-update', statusHandler as EventListener);
+    return () => {
+      window.removeEventListener('extension-status-update', statusHandler as EventListener);
+    }
+  }, [isUsersTurn, engineIsThinking, timeLeft])
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
   };
@@ -217,9 +237,8 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
     <div style={containerStyle}>
       <div style={headerStyle}>
         <h2 style={titleStyle}>{title}</h2>
-        <ExtensionState state="timer" timer={timeLeft}/>
+        <ExtensionState state={state} timer={timeLeft}/>
       </div>
-
       <div>
         {/* Regular stats - first 3 with percentages for indices 1 and 2 */}
         {stats.slice(0, 3).map((stat, index) => (
@@ -244,8 +263,6 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
             </div>
           </div>
         ))}
-
-        {/* Collapsible Best Moves Made stat */}
         <div
           style={collapsibleStatItemStyle}
           onClick={toggleExpanded}
@@ -276,8 +293,6 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
               </span>
             </div>
           </div>
-          
-          {/* Expanded sub-stats */}
           {isExpanded && (
             <div style={{marginTop: '1rem'}}>
               {stats.slice(3, 6).map((stat, index) => (

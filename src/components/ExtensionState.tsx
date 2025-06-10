@@ -14,7 +14,7 @@ export const ExtensionState = ({
     [string, React.CSSProperties]
   > = {
     waiting: [
-      'Waiting for opponent',
+      "Opponent's turn",
       {
         backgroundColor: '#eff6ff', // blue-50
         color: '#1e40af', // blue-800
@@ -38,7 +38,7 @@ export const ExtensionState = ({
       }
     ],
     ready: [
-      'Ready to block',
+      'Blocking :D',
       {
         backgroundColor: '#dcfce7', // green-50
         color: '#166534', // green-800
