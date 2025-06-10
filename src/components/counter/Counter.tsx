@@ -68,7 +68,7 @@ export default function Counter({
   fontSize = 100,
   padding = 0,
   places = [100, 10, 1],
-  gap = 8,
+  gap = 2,
   borderRadius = 4,
   horizontalPadding = 8,
   textColor = "white",

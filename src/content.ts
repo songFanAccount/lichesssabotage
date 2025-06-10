@@ -4,6 +4,7 @@ import { ExtensionDisplay } from "./components/ExtensionDisplay";
 import React from "react";
 
 let side = 0;
+const userMoves: string[] = [];
 let squareDim = 0;
 declare const chrome: any;
 let currentAudio: HTMLAudioElement | null = null;
@@ -75,7 +76,73 @@ Stats:
 3. Number of best moves blocked
 4. Number of best moves found before the engine 
 5. Number of best moves allowed by timer
+6. onlyMovesCount: Number of moves unblocked since they were the only move
 */
+
+let bestMovesFound = new Set<number>(); // = (bestMovesBlocked) + (bestMovesMade) = (bestMovesBlocked) + (bestMovesBeforeEng + movesAllowedByTimer + onlyMovesCount)
+let bestMovesBlocked = new Set<number>();
+let bestMovesBeforeEng = new Set<number>();
+let movesAllowedByTimer = new Set<number>();
+let onlyMovesAllowed = new Set<number>();
+function updateStats(data: any) {
+  window.dispatchEvent(
+    new CustomEvent("extension-stats-update", { detail: data })
+  );
+}
+function incNumMoves() {
+  updateStats({ numMoves: userMoves.length });
+}
+function incBestMovesBlocked() {
+  const moveIndex = userMoves.length;
+  const updateDetail: { [key: string]: any } = {};
+  if (!bestMovesBlocked.has(moveIndex)) {
+    bestMovesBlocked.add(moveIndex);
+    updateDetail.bestMovesBlocked = bestMovesBlocked.size;
+  }
+  if (!bestMovesFound.has(moveIndex)) {
+    bestMovesFound.add(moveIndex);
+    updateDetail.bestMovesFound = bestMovesFound.size;
+  }
+  updateStats(updateDetail);
+}
+function incBestMoveBeforeEngCount(moveIndex: number) {
+  const updateDetail: { [key: string]: any } = {};
+  if (!bestMovesBeforeEng.has(moveIndex)) {
+    bestMovesBeforeEng.add(moveIndex);
+    updateDetail.bestMovesBeforeEng = bestMovesBeforeEng.size;
+  }
+  if (!bestMovesFound.has(moveIndex)) {
+    bestMovesFound.add(moveIndex);
+    updateDetail.bestMovesFound = bestMovesFound.size;
+  }
+  updateStats(updateDetail);
+}
+function incTimerAllowedCount() {
+  const moveIndex = userMoves.length;
+  const updateDetail: { [key: string]: any } = {};
+  if (!movesAllowedByTimer.has(moveIndex)) {
+    movesAllowedByTimer.add(moveIndex);
+    updateDetail.movesAllowedByTimer = movesAllowedByTimer.size;
+  }
+  if (!bestMovesFound.has(moveIndex)) {
+    bestMovesFound.add(moveIndex);
+    updateDetail.bestMovesFound = bestMovesFound.size;
+  }
+  updateStats(updateDetail);
+}
+function incOnlyMoveCount() {
+  const moveIndex = userMoves.length;
+  const updateDetail: { [key: string]: any } = {};
+  if (!onlyMovesAllowed.has(moveIndex)) {
+    onlyMovesAllowed.add(moveIndex);
+    updateDetail.onlyMovesAllowed = onlyMovesAllowed.size;
+  }
+  if (!bestMovesFound.has(moveIndex)) {
+    bestMovesFound.add(moveIndex);
+    updateDetail.bestMovesFound = bestMovesFound.size;
+  }
+  updateStats(updateDetail);
+}
 function quitExtension() {
   console.log("Quitting extension...");
 }
@@ -149,7 +216,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     }
     const rm6 = await waitForRM6();
     const chessjs = new Chess();
-    const userMoves: string[] = [];
     async function updateUsermoveToUCI(moveIndex: number, fen: string) {
       const moveInSan = userMoves[moveIndex];
       const copyBoard = new Chess(fen);
@@ -157,12 +223,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       if (moveObj) {
         const uci = moveObj.from + moveObj.to + (moveObj.promotion || "");
         userMoves[moveIndex] = uci;
-        console.log(
-          `Move ${moveIndex}: Engine ${
-            moveIndex >= bestMoves.length ? "none" : bestMoves[moveIndex]
-          }, You: ${uci}`
-        );
-        console.log("Movelist", userMoves, bestMoves);
         // console.log(`Updated user move ${moveIndex} to ${uci}`, userMoves);
       }
     }
@@ -172,7 +232,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
           const nodeEl = node as HTMLElement;
           if (nodeEl.tagName === "KWDB") {
             const move = nodeEl.textContent?.trim();
-            const copyBoardFen = chessjs.fen();
             if (move) {
               const movingSide = chessjs.turn();
               const isUserTurn =
@@ -183,13 +242,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
                 console.error("Invalid move...");
               } else if (isUserTurn) {
                 userMoves.push(move);
-                const incMoveEvent = new CustomEvent("extension-stats-update", {
-                  detail: {
-                    numMoves: userMoves.length,
-                  },
-                });
-                window.dispatchEvent(incMoveEvent);
-                updateUsermoveToUCI(userMoves.length - 1, copyBoardFen);
+                incNumMoves();
               } else {
                 startOrRefreshTimer();
                 await updateBestmove(chessjs.fen());
@@ -240,7 +293,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       return;
     }
     side = cgWrap.classList.contains("orientation-white") ? 0 : 1;
-    // console.log(`Game is${isTimed ? " " : " not "}timed`);
+
     // ALL GOOD TO GO
 
     const gameMeta = document.querySelector("div.game__meta");
@@ -312,12 +365,10 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     }
     function onlyOneMove() {
       const ret = chessjs.moves().length <= 1;
-      if (ret) {
-        console.log("Let you through because it's the only move...");
-      }
       return ret;
     }
     function onBlock() {
+      incBestMovesBlocked();
       playAudio("sounds/vine-boom.mp3");
       const boardRect = board.getBoundingClientRect();
       if (bestMoveEndX !== undefined && bestMoveEndY !== undefined) {
@@ -332,19 +383,21 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       }
     }
     function blockMove(event: MouseEvent) {
+      if (onlyOneMove()) {
+        incOnlyMoveCount();
+        return;
+      }
       if (allowedToBlock) {
-        if (onlyOneMove()) {
-          return;
-        }
         if (!draggingPiece) onBlock();
         event.stopImmediatePropagation();
         event.preventDefault();
       } else {
-        console.log("Saved by timer...");
+        incTimerAllowedCount();
       }
     }
     function blockDragMove(event: MouseEvent) {
       if (onlyOneMove()) {
+        incOnlyMoveCount();
         return;
       }
       if (
@@ -384,7 +437,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
           event.stopImmediatePropagation();
           event.preventDefault();
         } else {
-          console.log("Saved by timer...");
+          incTimerAllowedCount();
         }
       }
     }
@@ -472,11 +525,12 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       const end = Date.now();
       console.log(`Time taken: ${end - start}ms`);
       if (bestMoveIndex < userMoves.length) {
-        console.log(
-          `Move ${bestMoveIndex}: Engine (${bestMoveInLan}), You (${userMoves[bestMoveIndex]})`
-        );
-        if (bestMoveInLan === userMoves[bestMoveIndex]) {
-          console.log("You beat the engine to this move!");
+        updateUsermoveToUCI(bestMoveIndex, fen);
+        if (
+          bestMoveInLan === userMoves[bestMoveIndex] &&
+          !bestMovesBeforeEng.has(bestMoveIndex)
+        ) {
+          incBestMoveBeforeEngCount(bestMoveIndex);
         }
       }
     }
@@ -495,7 +549,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
                 const move = nodeEl.textContent?.trim();
                 if (move) {
                   const movingSide = chessjs.turn();
-                  const copyBoardFen = chessjs.fen();
                   const userMadeFirstMove =
                     (movingSide === "w" && side === 0) ||
                     (movingSide === "b" && side === 1);
@@ -504,16 +557,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
                     console.error("Invalid move...");
                   } else if (userMadeFirstMove) {
                     userMoves.push(move);
-                    const incMoveEvent = new CustomEvent(
-                      "extension-stats-update",
-                      {
-                        detail: {
-                          numMoves: userMoves.length,
-                        },
-                      }
-                    );
-                    window.dispatchEvent(incMoveEvent);
-                    updateUsermoveToUCI(userMoves.length - 1, copyBoardFen);
+                    incNumMoves();
                   } else {
                     startOrRefreshTimer();
                     await updateBestmove(chessjs.fen());
