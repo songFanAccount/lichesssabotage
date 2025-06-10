@@ -68,6 +68,14 @@ function spawnFadingImg(src: string, x: number, y: number) {
   currentShadowContainer = shadowContainer;
 }
 
+/* 
+Stats:
+1. User's number of moves
+2. Number of best moves found -> Includes blocked
+3. Number of best moves blocked
+4. Number of best moves found before the engine 
+5. Number of best moves allowed by timer
+*/
 function quitExtension() {
   console.log("Quitting extension...");
 }
@@ -177,7 +185,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
                 userMoves.push(move);
                 const incMoveEvent = new CustomEvent("extension-stats-update", {
                   detail: {
-                    moves: userMoves.length,
+                    numMoves: userMoves.length,
                   },
                 });
                 window.dispatchEvent(incMoveEvent);
@@ -500,7 +508,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
                       "extension-stats-update",
                       {
                         detail: {
-                          moves: userMoves.length,
+                          numMoves: userMoves.length,
                         },
                       }
                     );
