@@ -3,16 +3,26 @@ import React from 'react';
 
 export const ExtensionState = ({
   state,
-  timer = 0
+  timer = 0,
+  endStatus
 }: {
   state: string;
   timer: number;
+  endStatus: string | undefined
 }) => {
   // Define a map of styles and messages for each state
   const variants: Record<
     string,
     [string, React.CSSProperties]
   > = {
+    ended: [
+      endStatus ? endStatus : "",
+      {
+  backgroundColor: '#0f0f0f', // Very dark gray/black
+  color: '#e5e5e5', // Light gray text for good contrast
+  border: '1px solid #404040' // Medium gray border
+}
+    ],
     waiting: [
       "Opponent's turn",
       {

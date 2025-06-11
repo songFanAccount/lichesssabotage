@@ -151,22 +151,27 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
   const [lastActionWasBlock, setLastActionWasBlock] = useState<boolean>(false)
   const [isUsersTurn, setIsUsersTurn] = useState<boolean>(false)
   const [engineIsThinking, setEngineIsThinking] = useState<boolean>(false)
+  const [gameEndStatus, setGameEndStatus] = useState<string | undefined>(undefined)
   const [timeLeft, setTimeLeft] = useState(0);
   const [timerDuration, setTimerDuration] = useState<number>(3)
-  const state = 
-  !isUsersTurn
+  const state =
+  gameEndStatus !== undefined
   ?
-    "waiting"
+    "ended"
   :
-    engineIsThinking
+    !isUsersTurn
     ?
-      "calculating"
+      "waiting"
     :
-      timeLeft > 0
+      engineIsThinking
       ?
-        "timer"
+        "calculating"
       :
-        "ready"
+        timeLeft > 0
+        ?
+          "timer"
+        :
+          "ready"
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -234,6 +239,7 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
       if ('isUsersTurn' in detail) setIsUsersTurn(detail.isUsersTurn)
       if ('engineIsThinking' in detail) setEngineIsThinking(detail.engineIsThinking)
       if ('restartTimer' in detail) resetTimer()
+      if ('gameEndStatus' in detail) setGameEndStatus(detail.gameEndStatus)
     }
     window.addEventListener('extension-status-update', statusHandler as EventListener);
     return () => {
@@ -248,7 +254,7 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
     <div style={containerStyle}>
       <div style={headerStyle}>
         <h2 style={titleStyle}>{title}</h2>
-        <ExtensionState state={state} timer={timeLeft}/>
+        <ExtensionState state={state} timer={timeLeft} endStatus={gameEndStatus}/>
       </div>
       <div>
         {/* Regular stats - first 3 with percentages for indices 1 and 2 */}
