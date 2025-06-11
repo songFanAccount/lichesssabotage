@@ -23,118 +23,6 @@ interface ExtensionDisplayProps {
   title?: string;
 }
 
-// Simple inline style objects
-const containerStyle: React.CSSProperties = {
-  backgroundColor: '#1f2937', // Gray-900
-  borderRadius: '0.5rem',
-  border: '1px solid #374151', // Gray-700
-  padding: '1.5rem',
-  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-  width: "100%",
-  marginTop: '24px',
-  color: '#d1d5db', // Gray-300
-  fontFamily: 'sans-serif'
-};
-
-const headerStyle: React.CSSProperties = {
-  marginBottom: '1.5rem',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  width: '100%'
-};
-
-const titleStyle: React.CSSProperties = {
-  fontSize: '1.25rem',
-  fontWeight: '600',
-  marginBottom: '0.25rem',
-  color: '#ffffff'
-};
-
-const statItemStyle: React.CSSProperties = {
-  backgroundColor: '#374151', // Gray-800
-  borderRadius: '0.5rem',
-  padding: '0.5rem',
-  border: '1px solid #374151',
-  marginBottom: '1rem'
-};
-
-const collapsibleStatItemStyle: React.CSSProperties = {
-  backgroundColor: '#374151', // Gray-800
-  borderRadius: '0.5rem',
-  padding: '1rem',
-  border: '1px solid #4f46e5', // Purple border to distinguish
-  marginBottom: '1rem',
-  cursor: 'pointer'
-};
-
-const subStatItemStyle: React.CSSProperties = {
-  backgroundColor: '#4b5563', // Gray-600
-  borderRadius: '0.375rem',
-  padding: '0.75rem',
-  border: '1px solid #6b7280',
-  marginBottom: '0.5rem',
-  marginLeft: '1rem'
-};
-
-const statItemHoverStyle: React.CSSProperties = {
-  borderColor: '#4b5563' // Gray-600
-};
-
-const labelContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.5rem',
-  marginBottom: '0.5rem'
-};
-
-const collapsibleHeaderStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  width: '100%'
-};
-
-const collapsibleLeftStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.25rem'
-};
-
-const collapsibleRightStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.75rem'
-};
-
-const valueWithPercentageStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'flex-end',
-  gap: '0.125rem'
-};
-
-const expandIconStyle: React.CSSProperties = {
-  fontSize: '0.875rem',
-  color: '#9ca3af',
-  transition: 'transform 0.2s'
-};
-
-const iconStyle: React.CSSProperties = {
-  fontSize: '1.25rem'
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: '0.875rem',
-  fontWeight: '500'
-};
-
-const percentageStyle: React.CSSProperties = {
-  fontSize: '0.75rem',
-  color: '#9ca3af',
-  marginLeft: '0.5rem'
-};
-
 export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
   title = 'Sabotage Stats'
 }) => {
@@ -154,6 +42,8 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
   const [gameEndStatus, setGameEndStatus] = useState<string | undefined>(undefined)
   const [timeLeft, setTimeLeft] = useState(0);
   const [timerDuration, setTimerDuration] = useState<number>(3)
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false)
+  
   const state =
   gameEndStatus !== undefined
   ?
@@ -174,6 +64,136 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
           "ready"
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Theme-based colors
+  const theme = {
+    bg: isDarkMode ? '#1f2937' : '#ffffff',
+    bgSecondary: isDarkMode ? '#374151' : '#f8fafc',
+    bgTertiary: isDarkMode ? '#4b5563' : '#e2e8f0',
+    text: isDarkMode ? '#ffffff' : '#111827',
+    textSecondary: isDarkMode ? '#d1d5db' : '#374151',
+    textMuted: isDarkMode ? '#9ca3af' : '#6b7280',
+    border: isDarkMode ? '#374151' : '#d1d5db',
+    borderHover: isDarkMode ? '#4b5563' : '#9ca3af',
+    borderCollapsible: isDarkMode ? '#4f46e5' : '#6366f1',
+    borderCollapsibleHover: isDarkMode ? '#6366f1' : '#4f46e5'
+  };
+
+  const handleThemeChange = (newIsDarkMode: boolean) => {
+    setIsDarkMode(newIsDarkMode);
+  };
+
+  // Style objects with theme support
+  const containerStyle: React.CSSProperties = {
+    backgroundColor: theme.bg,
+    borderRadius: '0.5rem',
+    border: `1px solid ${theme.border}`,
+    padding: '1.5rem',
+    boxShadow: isDarkMode ? '0 4px 6px rgba(0, 0, 0, 0.1)' : '0 4px 6px rgba(0, 0, 0, 0.05)',
+    width: "100%",
+    marginTop: '24px',
+    color: theme.textSecondary,
+    fontFamily: 'sans-serif'
+  };
+
+  const headerStyle: React.CSSProperties = {
+    marginBottom: '1.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%'
+  };
+
+  const titleStyle: React.CSSProperties = {
+    fontSize: '1.25rem',
+    fontWeight: '600',
+    marginBottom: '0.25rem',
+    color: theme.text
+  };
+
+  const statItemStyle: React.CSSProperties = {
+    backgroundColor: theme.bgSecondary,
+    borderRadius: '0.5rem',
+    padding: '0.5rem',
+    border: `1px solid ${theme.border}`,
+    marginBottom: '1rem'
+  };
+
+  const collapsibleStatItemStyle: React.CSSProperties = {
+    backgroundColor: theme.bgSecondary,
+    borderRadius: '0.5rem',
+    padding: '1rem',
+    border: `1px solid ${theme.borderCollapsible}`,
+    marginBottom: '1rem',
+    cursor: 'pointer'
+  };
+
+  const subStatItemStyle: React.CSSProperties = {
+    backgroundColor: theme.bgTertiary,
+    borderRadius: '0.375rem',
+    padding: '0.75rem',
+    border: `1px solid ${theme.border}`,
+    marginBottom: '0.5rem',
+    marginLeft: '1rem'
+  };
+
+  const statItemHoverStyle: React.CSSProperties = {
+    borderColor: theme.borderHover
+  };
+
+  const labelContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    marginBottom: '0.5rem'
+  };
+
+  const collapsibleHeaderStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%'
+  };
+
+  const collapsibleLeftStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.25rem'
+  };
+
+  const collapsibleRightStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem'
+  };
+
+  const valueWithPercentageStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: '0.125rem'
+  };
+
+  const expandIconStyle: React.CSSProperties = {
+    fontSize: '0.875rem',
+    color: theme.textMuted,
+    transition: 'transform 0.2s'
+  };
+
+  const iconStyle: React.CSSProperties = {
+    fontSize: '1.25rem'
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: '0.875rem',
+    fontWeight: '500'
+  };
+
+  const percentageStyle: React.CSSProperties = {
+    fontSize: '0.75rem',
+    color: theme.textMuted,
+    marginLeft: '0.5rem'
+  };
 
   const startTimer = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -205,12 +225,18 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
     const detail = customEvent.detail
     if ("appliedDuration" in detail) setTimerDuration(detail.appliedDuration)
   }
+  function handleLightDarkModeChange(event: Event) {
+    const customEvent = event as CustomEvent
+    const detail = customEvent.detail
+    if ('mode' in detail) handleThemeChange(detail.mode)
+  }
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("extension_display_ready"))
     window.addEventListener("extension-settings-update", handleSettingsUpdate)
+    window.addEventListener("light-dark-mode", handleLightDarkModeChange)
     return () => {
     window.removeEventListener("extension-settings-update", handleSettingsUpdate)
-
+    window.removeEventListener("light-dark-mode", handleLightDarkModeChange)
     }
   }, [])
   useEffect(() => {
@@ -263,7 +289,7 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
             key={index}
             style={statItemStyle}
             onMouseOver={e => ((e.currentTarget.style.borderColor = statItemHoverStyle.borderColor!))}
-            onMouseOut={e => ((e.currentTarget.style.borderColor = statItemStyle.borderColor!))}
+            onMouseOut={e => ((e.currentTarget.style.borderColor = theme.border))}
           >
             <div style={labelContainerStyle}>
               {stat.icon && <span style={iconStyle}>{stat.icon}</span>}
@@ -283,8 +309,8 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
         <div
           style={collapsibleStatItemStyle}
           onClick={toggleExpanded}
-          onMouseOver={e => ((e.currentTarget.style.borderColor = '#6366f1'))}
-          onMouseOut={e => ((e.currentTarget.style.borderColor = '#4f46e5'))}
+          onMouseOver={e => ((e.currentTarget.style.borderColor = theme.borderCollapsibleHover))}
+          onMouseOut={e => ((e.currentTarget.style.borderColor = theme.borderCollapsible))}
         >
           <div style={collapsibleHeaderStyle}>
             <div style={collapsibleLeftStyle}>

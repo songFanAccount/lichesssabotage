@@ -1,15 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { Volume2, VolumeX, X, Check, Settings } from 'lucide-react';
+import { Volume2, VolumeX, X, Check, Settings, Sun, Moon } from 'lucide-react';
 
 export const ExtensionSettings = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [duration, setDuration] = useState(3);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [appliedMuted, setAppliedMuted] = useState(false);
   const [appliedDuration, setAppliedDuration] = useState(3);
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleMute = () => {
     setIsMuted(!isMuted);
+  };
+
+  const toggleTheme = () => {
+    const newMode = !isDarkMode
+    setIsDarkMode(newMode);
+    window.dispatchEvent(new CustomEvent("light-dark-mode", {detail: {
+      mode: newMode
+    }}))
   };
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,7 +39,7 @@ export const ExtensionSettings = () => {
     window.dispatchEvent(new CustomEvent("apply-settings", {
       detail: {
         isMuted: isMuted,
-        duration: duration
+        duration: duration,
       }
     }))
   };
@@ -38,6 +47,7 @@ export const ExtensionSettings = () => {
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("extension_settings_ready"))
   }, [])
+  
   useEffect(() => {
     const handler = (event: CustomEvent) => {
       const detail = event.detail
@@ -49,14 +59,29 @@ export const ExtensionSettings = () => {
       window.removeEventListener("extension-settings-update", handler as EventListener)
     }
   }, [appliedMuted, appliedDuration])
+
+  // Theme-based colors
+  const theme = {
+    bg: isDarkMode ? '#111827' : '#ffffff',
+    bgSecondary: isDarkMode ? '#1f2937' : '#f8fafc',
+    bgButton: isDarkMode ? '#374151' : '#e5e7eb',
+    bgButtonHover: isDarkMode ? '#4b5563' : '#d1d5db',
+    text: isDarkMode ? '#ffffff' : '#111827',
+    textSecondary: isDarkMode ? '#d1d5db' : '#374151',
+    textMuted: isDarkMode ? '#9ca3af' : '#6b7280',
+    border: isDarkMode ? '#374151' : '#d1d5db',
+    borderSecondary: isDarkMode ? '#4b5563' : '#e5e7eb',
+    overlay: 'rgba(0, 0, 0, 0.75)'
+  };
+
   const settingsButtonStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '12px',
-    backgroundColor: '#374151',
-    color: '#ffffff',
-    border: 'none',
+    backgroundColor: theme.bgButton,
+    color: theme.text,
+    border: isDarkMode ? 'none' : "1px solid #1f2937",
     borderRadius: '8px',
     cursor: 'pointer',
     fontSize: '14px',
@@ -72,7 +97,7 @@ export const ExtensionSettings = () => {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: theme.overlay,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -81,11 +106,11 @@ export const ExtensionSettings = () => {
   };
 
   const containerStyle: React.CSSProperties = {
-    backgroundColor: '#111827',
+    backgroundColor: theme.bg,
     padding: '24px',
     borderRadius: '12px',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-    border: '1px solid #374151',
+    boxShadow: isDarkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)' : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    border: `1px solid ${theme.border}`,
     maxWidth: '384px',
     width: '100%',
     fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -95,7 +120,7 @@ export const ExtensionSettings = () => {
   };
 
   const titleStyle: React.CSSProperties = {
-    color: '#ffffff',
+    color: theme.text,
     fontSize: '20px',
     fontWeight: '600',
     marginBottom: '24px',
@@ -109,7 +134,7 @@ export const ExtensionSettings = () => {
 
   const labelStyle: React.CSSProperties = {
     display: 'block',
-    color: '#d1d5db',
+    color: theme.textSecondary,
     fontSize: '14px',
     fontWeight: '500',
     marginBottom: '12px'
@@ -130,18 +155,35 @@ export const ExtensionSettings = () => {
     transition: 'background-color 0.2s ease',
     backgroundColor: isMuted ? '#dc2626' : '#16a34a',
     color: '#ffffff'
-  }
+  };
+
+  const themeButtonStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    width: '100%',
+    padding: '12px 16px',
+    borderRadius: '6px',
+    border: `1px solid ${theme.border}`,
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    transition: 'all 0.2s ease',
+    backgroundColor: theme.bgSecondary,
+    color: theme.text
+  };
 
   const currentSettingsStyle: React.CSSProperties = {
     marginTop: '24px',
     padding: '12px',
-    backgroundColor: '#1f2937',
+    backgroundColor: theme.bgSecondary,
     borderRadius: '6px',
-    border: '1px solid #4b5563'
+    border: `1px solid ${theme.borderSecondary}`
   };
 
   const currentSettingsTitleStyle: React.CSSProperties = {
-    color: '#d1d5db',
+    color: theme.textSecondary,
     fontSize: '14px',
     fontWeight: '500',
     marginBottom: '8px',
@@ -150,7 +192,7 @@ export const ExtensionSettings = () => {
 
   const settingsListStyle: React.CSSProperties = {
     fontSize: '14px',
-    color: '#9ca3af'
+    color: theme.textMuted
   };
 
   const settingItemStyle: React.CSSProperties = {
@@ -165,13 +207,17 @@ export const ExtensionSettings = () => {
     color: '#60a5fa'
   };
 
+  const themeValueStyle: React.CSSProperties = {
+    color: '#a78bfa'
+  };
+
   const closeButtonStyle: React.CSSProperties = {
     position: 'absolute',
     top: '16px',
     right: '16px',
     background: 'transparent',
     border: 'none',
-    color: '#9ca3af',
+    color: theme.textMuted,
     cursor: 'pointer',
     padding: '4px',
     borderRadius: '4px',
@@ -199,6 +245,8 @@ export const ExtensionSettings = () => {
     marginTop: '16px'
   };
 
+  const sliderTrackColor = '#1e40af';
+
   return (
     <>
       {/* Settings Button */}
@@ -206,12 +254,12 @@ export const ExtensionSettings = () => {
         onClick={handleTogglePopup}
         style={settingsButtonStyle}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#4b5563';
+          e.currentTarget.style.backgroundColor = theme.bgButtonHover;
           e.currentTarget.style.transform = 'translateY(-1px)';
           e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.2)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = '#374151';
+          e.currentTarget.style.backgroundColor = theme.bgButton;
           e.currentTarget.style.transform = 'translateY(0)';
           e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
         }}
@@ -229,11 +277,11 @@ export const ExtensionSettings = () => {
               onClick={() => setIsOpen(false)}
               style={closeButtonStyle}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#ffffff';
-                e.currentTarget.style.backgroundColor = '#374151';
+                e.currentTarget.style.color = theme.text;
+                e.currentTarget.style.backgroundColor = theme.bgButton;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#9ca3af';
+                e.currentTarget.style.color = theme.textMuted;
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
@@ -242,24 +290,58 @@ export const ExtensionSettings = () => {
 
             <h2 style={titleStyle}>Extension Settings</h2>
             
-            {/* Mute Button */}
+            {/* Theme and Audio Controls */}
             <div style={sectionStyle}>
-              <label style={labelStyle}>Audio</label>
-              <button
-                onClick={toggleMute}
-                style={muteButtonStyle}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = isMuted ? '#b91c1c' : '#15803d';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = isMuted ? '#dc2626' : '#16a34a';
-                }}
-              >
-                {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                <span>
-                  {isMuted ? 'Unmute' : 'Mute'}
-                </span>
-              </button>
+              <label style={labelStyle}>Controls</label>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '12px'
+              }}>
+                {/* Theme Toggle */}
+                <button
+                  onClick={toggleTheme}
+                  style={{
+                    ...themeButtonStyle,
+                    flexDirection: 'column',
+                    gap: '4px',
+                    padding: '12px 8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.bgButton;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.bgSecondary;
+                  }}
+                >
+                  {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                  <span style={{ fontSize: '12px', textAlign: 'center' }}>
+                    {isDarkMode ? 'Dark mode' : 'Light mode'}
+                  </span>
+                </button>
+
+                {/* Mute Button */}
+                <button
+                  onClick={toggleMute}
+                  style={{
+                    ...muteButtonStyle,
+                    flexDirection: 'column',
+                    gap: '4px',
+                    padding: '12px 8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = isMuted ? '#b91c1c' : '#15803d';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = isMuted ? '#dc2626' : '#16a34a';
+                  }}
+                >
+                  {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                  <span style={{ fontSize: '12px', textAlign: 'center' }}>
+                    {isMuted ? 'Unmute' : 'Mute'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Timer Duration Slider */}
@@ -279,7 +361,7 @@ export const ExtensionSettings = () => {
                   left: '0',
                   right: '0',
                   height: '2px',
-                  backgroundColor: '#6b7280', // neutral color for the track
+                  backgroundColor: sliderTrackColor,
                   transform: 'translateY(-50%)'
                 }}></div>
 
@@ -293,7 +375,7 @@ export const ExtensionSettings = () => {
                   style={{
                     width: '100%',
                     height: '16px',
-                    background: 'transparent', // no fill
+                    background: 'transparent',
                     appearance: 'none',
                     WebkitAppearance: 'none',
                     cursor: 'pointer',
@@ -308,7 +390,7 @@ export const ExtensionSettings = () => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 fontSize: '12px',
-                color: '#9ca3af',
+                color: theme.textMuted,
                 marginTop: '4px',
                 marginLeft: '2px'
               }}>
@@ -323,7 +405,7 @@ export const ExtensionSettings = () => {
                   height: 16px;
                   width: 16px;
                   border-radius: 50%;
-                  background: #3b82f6;
+                  background: #1e40af;
                   cursor: pointer;
                   border: 2px solid #1e40af;
                   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
@@ -360,6 +442,9 @@ export const ExtensionSettings = () => {
             <div style={currentSettingsStyle}>
               <h3 style={currentSettingsTitleStyle}>Current Settings:</h3>
               <div style={settingsListStyle}>
+                <div style={settingItemStyle}>
+                  Theme: <span style={themeValueStyle}>{isDarkMode ? 'Dark Mode' : 'Light Mode'}</span>
+                </div>
                 <div style={settingItemStyle}>
                   Audio: <span style={muteValueStyle}>{appliedMuted ? 'Muted' : 'Enabled'}</span>
                 </div>
