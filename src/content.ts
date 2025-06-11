@@ -8,7 +8,6 @@ let side = 0;
 let isMuted = false;
 const userMoves: string[] = [];
 let squareDim = 0;
-declare const chrome: any;
 let currentAudio: HTMLAudioElement | null = null;
 let lastImgSrcIndex: number = 0;
 const imgSrcs = ["blank", "sad", "angry", "goofy"];
@@ -259,6 +258,10 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       const detail = customEvent.detail;
       if ("isMuted" in detail) isMuted = detail.isMuted;
       if ("duration" in detail) timerDuration = detail.duration * 1000;
+      chrome.storage.local.set({
+        sab_isMuted: isMuted,
+        sab_timerDuration: timerDuration,
+      });
       window.dispatchEvent(
         new CustomEvent("extension-settings-update", {
           detail: {
@@ -359,6 +362,21 @@ function getXYCoordAtCoord(coord: string): [number, number] {
 
     // ALL GOOD TO GO
 
+    chrome.storage.local.get(
+      ["sab_isMuted", "sab_timerDuration"],
+      (data: { [key: string]: any }) => {
+        if ("sab_isMuted" in data) isMuted = data.sab_isMuted;
+        if ("sab_timerDuration" in data) timerDuration = data.sab_timerDuration;
+        window.dispatchEvent(
+          new CustomEvent("extension-settings-load", {
+            detail: {
+              isMuted: isMuted,
+              duration: timerDuration / 1000,
+            },
+          })
+        );
+      }
+    );
     let draggingPiece: HTMLElement | undefined = undefined;
     const pieceObserver = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {

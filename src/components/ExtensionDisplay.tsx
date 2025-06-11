@@ -230,11 +230,25 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
     const detail = customEvent.detail
     if ('mode' in detail) handleThemeChange(detail.mode)
   }
+const loadSettings = (event: Event) => {
+    const customEvent = event as CustomEvent
+    const detail = customEvent.detail
+    if ('duration' in detail) {
+      setTimerDuration(detail.duration)
+      setTimeLeft(detail.duration)
+    }
+  }
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("extension_display_ready"))
+    window.addEventListener("extension-settings-load", loadSettings)
     window.addEventListener("extension-settings-update", handleSettingsUpdate)
     window.addEventListener("light-dark-mode", handleLightDarkModeChange)
+    chrome.storage.local.get(["sab_darkmode"], (data) => {
+      if ("sab_darkmode" in data) setIsDarkMode(data.sab_darkmode)
+    })
     return () => {
+      window.removeEventListener("extension-settings-load", loadSettings)
+
     window.removeEventListener("extension-settings-update", handleSettingsUpdate)
     window.removeEventListener("light-dark-mode", handleLightDarkModeChange)
     }

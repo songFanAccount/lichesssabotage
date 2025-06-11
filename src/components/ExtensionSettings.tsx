@@ -19,6 +19,7 @@ export const ExtensionSettings = () => {
     window.dispatchEvent(new CustomEvent("light-dark-mode", {detail: {
       mode: newMode
     }}))
+    chrome.storage.local.set({"sab_darkmode": newMode})
   };
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,8 +45,27 @@ export const ExtensionSettings = () => {
     }))
   };
 
+  const loadSettings = (event: Event) => {
+    const customEvent = event as CustomEvent
+    const detail = customEvent.detail
+    if ('isMuted' in detail) {
+      setAppliedMuted(detail.isMuted)
+      setIsMuted(detail.isMuted)
+    }
+    if ('duration' in detail) {
+      setDuration(detail.duration)
+      setAppliedDuration(detail.duration)
+    }
+  }
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("extension_settings_ready"))
+    chrome.storage.local.get(["sab_darkmode"], (data) => {
+      if ("sab_darkmode" in data) setIsDarkMode(data.sab_darkmode)
+    })
+    window.addEventListener("extension-settings-load", loadSettings)
+    return () => {
+      window.removeEventListener("extension-settings-load", loadSettings)
+    }
   }, [])
   
   useEffect(() => {
