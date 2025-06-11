@@ -205,7 +205,36 @@ async function getBestMove(fen: string, depth: number = 15) {
     return null;
   }
 }
-
+type Move = {
+  uci: string;
+  san: string;
+  white: number;
+  draws: number;
+  black: number;
+  averageRating: number;
+};
+type LichessExplorerResponse = {
+  white: number;
+  draws: number;
+  black: number;
+  moves: Move[];
+};
+async function getBookMoves(fen: string): Promise<Move[] | undefined> {
+  const url = `https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(
+    fen
+  )}`;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Lichess API error: ${response.status}`);
+    }
+    const data: LichessExplorerResponse = await response.json();
+    return data.moves;
+  } catch (error) {
+    console.error("Error fetching book moves:", error);
+    return undefined;
+  }
+}
 function getXYCoordAtCoord(coord: string): [number, number] {
   const leftFile = side === 0 ? "a" : "h";
   const file = coord[0];
@@ -227,6 +256,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     const rm6 = await waitForRM6();
     const chessjs = new Chess();
     async function updateUsermoveToUCI(moveIndex: number, fen: string) {
+      console.log(moveIndex, fen, userMoves, bestMoves);
       const moveInSan = userMoves[moveIndex];
       const copyBoard = new Chess(fen);
       const moveObj = copyBoard.move(moveInSan);
@@ -309,6 +339,15 @@ function getXYCoordAtCoord(coord: string): [number, number] {
                 console.error("Invalid move...");
               } else if (isUserTurn) {
                 userMoves.push(move);
+                if (stillBookMoves) {
+                  const bookMoves = await getBookMoves(chessjs.fen());
+                  const isStillBook = bookMoves && bookMoves.length > 0;
+                  if (isStillBook) bestMoves.push(move);
+                  else {
+                    toggleOffBook();
+                    bestMoves.push(undefined);
+                  }
+                }
                 updateStatus({
                   isUsersTurn: false,
                 });
@@ -362,6 +401,26 @@ function getXYCoordAtCoord(coord: string): [number, number] {
 
     // ALL GOOD TO GO
 
+    const bookmovesOnLoad = await getBookMoves(chessjs.fen());
+    if (!bookmovesOnLoad) return;
+    let stillBookMoves = bookmovesOnLoad.length > 0; // If the game is still in book, don't block any book moves, and don't use engine to calculate best moves.
+    function toggleOffBook() {
+      stillBookMoves = false;
+      window.dispatchEvent(
+        new CustomEvent("book-moves-change", {
+          detail: {
+            isBookMoves: stillBookMoves,
+          },
+        })
+      );
+    }
+    window.dispatchEvent(
+      new CustomEvent("book-moves-change", {
+        detail: {
+          isBookMoves: stillBookMoves,
+        },
+      })
+    );
     chrome.storage.local.get(
       ["sab_isMuted", "sab_timerDuration"],
       (data: { [key: string]: any }) => {
@@ -572,6 +631,13 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       });
     }
     async function updateBestmove(fen: string) {
+      if (stillBookMoves) {
+        const bookmoves = await getBookMoves(chessjs.fen());
+        if (!bookmoves || bookmoves.length === 0) toggleOffBook();
+        else {
+          return;
+        }
+      }
       updateStatus({
         isUsersTurn: true,
         engineIsThinking: true,
@@ -666,6 +732,13 @@ function getXYCoordAtCoord(coord: string): [number, number] {
                     console.error("Invalid move...");
                   } else if (userMadeFirstMove) {
                     userMoves.push(move);
+                    const bookMoves = await getBookMoves(chessjs.fen());
+                    const isStillBook = bookMoves && bookMoves.length > 0;
+                    if (isStillBook) bestMoves.push(move);
+                    else {
+                      toggleOffBook();
+                      bestMoves.push(undefined);
+                    }
                     updateStatus({
                       isUsersTurn: false,
                     });

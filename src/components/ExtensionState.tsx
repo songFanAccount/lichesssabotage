@@ -33,6 +33,14 @@ export const ExtensionState = ({
         border: '1px solid #bfdbfe' // blue-200
       }
     ],
+    book: [
+      "Book, no engine",
+      {
+        backgroundColor: '#ecfdf5', // teal-50: very soft teal for background
+        color: '#064e3b', // teal-900: dark teal for text
+        border: '1px solid #99f6e4' // teal-200: light teal border
+      }
+    ],
     calculating: [
       'Calculating',
       {

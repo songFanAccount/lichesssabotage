@@ -32,11 +32,13 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
     { label: 'Best Moves Blocked', value: 0, icon: '🛑' },
     { label: 'Found Before Engine', value: 0, icon: '🧠' },
     { label: 'Timer Saved Moves', value: 0, icon: '⏱️' },
-    { label: 'Only moves allowed', value: 0, icon: '⛓️'}
+    { label: 'Only moves allowed', value: 0, icon: '⛓️'},
+    { label: 'Number of book moves', value: 0, icon: '📗'},
   ];
 
   const [stats, setStats] = useState<{ label: string; value: number; icon: string }[]>(initStats);
   const [lastActionWasBlock, setLastActionWasBlock] = useState<boolean>(false)
+  const [stillBookMoves, setStillBookMoves] = useState<boolean>(true)
   const [isUsersTurn, setIsUsersTurn] = useState<boolean>(false)
   const [engineIsThinking, setEngineIsThinking] = useState<boolean>(false)
   const [gameEndStatus, setGameEndStatus] = useState<string | undefined>(undefined)
@@ -53,18 +55,23 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
     ?
       "waiting"
     :
-      engineIsThinking
+      stillBookMoves
       ?
-        "calculating"
+        "book"
       :
-        timeLeft > 0
+        engineIsThinking
         ?
-          "timer"
+          "calculating"
         :
-          "ready"
+          timeLeft > 0
+          ?
+            "timer"
+          :
+            "ready"
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // #region style
   // Theme-based colors
   const theme = {
     bg: isDarkMode ? '#1f2937' : '#ffffff',
@@ -195,6 +202,8 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
     marginLeft: '0.5rem'
   };
 
+  // #endregion
+  
   const startTimer = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
 
@@ -229,6 +238,11 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
     const customEvent = event as CustomEvent
     const detail = customEvent.detail
     if ('mode' in detail) handleThemeChange(detail.mode)
+    }
+  function handleIsBookMoves(event: Event) {
+    const customEvent = event as CustomEvent
+    const detail = customEvent.detail
+    if ('isBookMoves' in detail) setStillBookMoves(detail.isBookMoves)
   }
 const loadSettings = (event: Event) => {
     const customEvent = event as CustomEvent
@@ -240,6 +254,7 @@ const loadSettings = (event: Event) => {
   }
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("extension_display_ready"))
+    window.addEventListener("book-moves-change", handleIsBookMoves)
     window.addEventListener("extension-settings-load", loadSettings)
     window.addEventListener("extension-settings-update", handleSettingsUpdate)
     window.addEventListener("light-dark-mode", handleLightDarkModeChange)
@@ -247,10 +262,10 @@ const loadSettings = (event: Event) => {
       if ("sab_darkmode" in data) setIsDarkMode(data.sab_darkmode)
     })
     return () => {
+      window.removeEventListener("book-moves-change", handleIsBookMoves)
       window.removeEventListener("extension-settings-load", loadSettings)
-
-    window.removeEventListener("extension-settings-update", handleSettingsUpdate)
-    window.removeEventListener("light-dark-mode", handleLightDarkModeChange)
+      window.removeEventListener("extension-settings-update", handleSettingsUpdate)
+      window.removeEventListener("light-dark-mode", handleLightDarkModeChange)
     }
   }, [])
   useEffect(() => {
@@ -266,6 +281,7 @@ const loadSettings = (event: Event) => {
       if ('bestMovesBeforeEng' in detail) newStats[3].value = detail.bestMovesBeforeEng;
       if ('movesAllowedByTimer' in detail) newStats[4].value = detail.movesAllowedByTimer;
       if ('onlyMovesAllowed' in detail) newStats[5].value = detail.onlyMovesAllowed;
+      if ('numBookMoves' in detail) newStats[6].value = detail.numBookMoves
       setStats(newStats);
     };
     window.addEventListener('extension-stats-update', moveHandler as EventListener);
