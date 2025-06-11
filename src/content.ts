@@ -277,16 +277,16 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       const display = React.createElement(ExtensionDisplay);
       root.render(display);
       await waitForDisplay();
-    }
-    const underboard = document.querySelector("div.round__underboard");
-    if (underboard) {
-      const container = document.createElement("div");
-      container.id = "extension-settings-root";
-      container.textContent = "settings";
-      underboard.append(container);
-      const root = createRoot(container);
-      const display = React.createElement(ExtensionSettings);
-      root.render(display);
+      const settingsContainer = document.createElement("div");
+      settingsContainer.id = "extension-settings-root";
+      settingsContainer.textContent = "settings";
+      container.parentNode?.insertBefore(
+        settingsContainer,
+        container.nextSibling
+      );
+      const settingsRoot = createRoot(settingsContainer);
+      const settingsDisplay = React.createElement(ExtensionSettings);
+      settingsRoot.render(settingsDisplay);
       await waitForSettings();
       window.addEventListener("apply-settings", applySettings);
     }

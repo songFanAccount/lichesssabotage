@@ -4,11 +4,13 @@ import React from 'react';
 export const ExtensionState = ({
   state,
   timer = 0,
-  endStatus
+  endStatus,
+  isDarkMode
 }: {
   state: string;
   timer: number;
-  endStatus: string | undefined
+  endStatus: string | undefined,
+  isDarkMode: boolean
 }) => {
   // Define a map of styles and messages for each state
   const variants: Record<
@@ -72,7 +74,7 @@ export const ExtensionState = ({
   };
 
   return (
-    <div style={containerStyle}>
+    <div style={{...containerStyle, border: isDarkMode ? containerStyle.border : `1px solid ${containerStyle.color}`}} >
       <span style={{fontFamily: "sans-serif"}}>{variant[0]}</span>
     </div>
   );

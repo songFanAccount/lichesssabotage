@@ -280,7 +280,7 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
     <div style={containerStyle}>
       <div style={headerStyle}>
         <h2 style={titleStyle}>{title}</h2>
-        <ExtensionState state={state} timer={timeLeft} endStatus={gameEndStatus}/>
+        <ExtensionState state={state} timer={timeLeft} endStatus={gameEndStatus} isDarkMode={isDarkMode}/>
       </div>
       <div>
         {/* Regular stats - first 3 with percentages for indices 1 and 2 */}
@@ -296,7 +296,7 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
               <span style={labelStyle}>{stat.label}</span>
             </div>
             <div style={{position: "relative", left: "-4px", display: 'flex', alignItems: 'center'}}>
-              <Counter value={stat.value} fontSize={20} places={stat.value >= 10 ? [10, 1] : [1]} />
+              <Counter value={stat.value} fontSize={20} places={stat.value >= 10 ? [10, 1] : [1]} textColor={isDarkMode ? "white" : "#374151"} />
               {index === 1 && ( // Best Moves Found
                 <span style={percentageStyle}>({bestMovesFoundPercentage}%)</span>
               )}
@@ -322,7 +322,7 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
             <div style={collapsibleRightStyle}>
               <div style={valueWithPercentageStyle}>
                 <div style={{position: "relative", left: "-4px"}}>
-                  <Counter value={bestMovesMade} fontSize={20} places={bestMovesMade >= 10 ? [10, 1] : [1]} />
+                  <Counter value={bestMovesMade} fontSize={20} places={bestMovesMade >= 10 ? [10, 1] : [1]} textColor={isDarkMode ? "white" : "#374151"}/>
                 </div>
                 <span style={{...percentageStyle, marginLeft: 0}}>({bestMovesMadePercentage}%)</span>
               </div>
@@ -345,7 +345,7 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
                     <span style={{...labelStyle, fontSize: '0.75rem'}}>{stat.label}</span>
                   </div>
                   <div style={{position: "relative", left: "-4px"}}>
-                    <Counter value={stat.value} fontSize={16} places={stat.value >= 10 ? [10, 1] : [1]} />
+                    <Counter value={stat.value} fontSize={16} places={stat.value >= 10 ? [10, 1] : [1]} textColor={isDarkMode ? "white" : "#374151"}/>
                   </div>
                 </div>
               ))}

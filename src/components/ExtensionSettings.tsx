@@ -78,6 +78,7 @@ export const ExtensionSettings = () => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: '24px',
     padding: '12px',
     backgroundColor: theme.bgButton,
     color: theme.text,
@@ -250,6 +251,9 @@ export const ExtensionSettings = () => {
   return (
     <>
       {/* Settings Button */}
+      <div style={{width: "100%", display: "flex", alignItems: 'center',
+    justifyContent: 'center',}}>
+
       <button
         onClick={handleTogglePopup}
         style={settingsButtonStyle}
@@ -267,6 +271,7 @@ export const ExtensionSettings = () => {
         <Settings size={20} />
         <span style={{ marginLeft: '8px' }}>Extension Settings</span>
       </button>
+      </div>
 
       {/* Settings Popup */}
       {isOpen && (
