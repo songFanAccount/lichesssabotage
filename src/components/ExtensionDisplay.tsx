@@ -152,6 +152,7 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
   const [isUsersTurn, setIsUsersTurn] = useState<boolean>(false)
   const [engineIsThinking, setEngineIsThinking] = useState<boolean>(false)
   const [timeLeft, setTimeLeft] = useState(0);
+  const [timerDuration, setTimerDuration] = useState<number>(3)
   const state = 
   !isUsersTurn
   ?
@@ -182,7 +183,7 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
   };
 
   const resetTimer = () => {
-    setTimeLeft(3);
+    setTimeLeft(timerDuration);
     startTimer();
   };
   // Calculate best moves made (sum of indices 3, 4, 5)
@@ -194,8 +195,18 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
   const bestMovesBlockedPercentage = totalMoves > 0 ? ((stats[2].value / totalMoves) * 100).toFixed(1) : '0.0';
   const bestMovesMadePercentage = totalMoves > 0 ? ((bestMovesMade / totalMoves) * 100).toFixed(1) : '0.0';
 
+  function handleSettingsUpdate(event: Event) {
+    const customEvent = event as CustomEvent
+    const detail = customEvent.detail
+    if ("appliedDuration" in detail) setTimerDuration(detail.appliedDuration)
+  }
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("extension_display_ready"))
+    window.addEventListener("extension-settings-update", handleSettingsUpdate)
+    return () => {
+    window.removeEventListener("extension-settings-update", handleSettingsUpdate)
+
+    }
   }, [])
   useEffect(() => {
     const moveHandler = (e: CustomEvent) => {

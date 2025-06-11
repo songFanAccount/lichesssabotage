@@ -5,6 +5,7 @@ import React from "react";
 import { ExtensionSettings } from "./components/ExtensionSettings";
 
 let side = 0;
+let isMuted = false;
 const userMoves: string[] = [];
 let squareDim = 0;
 declare const chrome: any;
@@ -156,7 +157,7 @@ function quitExtension() {
 }
 // Timer
 let allowedToBlock = false;
-const timerDuration = 3000;
+let timerDuration = 3000;
 let timerID: ReturnType<typeof setTimeout> | null = null;
 function startOrRefreshTimer() {
   if (timerID !== null) {
@@ -252,6 +253,20 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         window.addEventListener("extension_settings_ready", handler);
       });
     }
+    function applySettings(event: Event) {
+      const customEvent = event as CustomEvent;
+      const detail = customEvent.detail;
+      if ("isMuted" in detail) isMuted = detail.isMuted;
+      if ("duration" in detail) timerDuration = detail.duration * 1000;
+      window.dispatchEvent(
+        new CustomEvent("extension-settings-update", {
+          detail: {
+            appliedIsMuted: isMuted,
+            appliedDuration: detail.duration,
+          },
+        })
+      );
+    }
     const gameMeta = document.querySelector("div.game__meta");
     if (gameMeta) {
       const container = document.createElement("div");
@@ -272,6 +287,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       const display = React.createElement(ExtensionSettings);
       root.render(display);
       await waitForSettings();
+      window.addEventListener("apply-settings", applySettings);
     }
     const movelistObserver = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {
@@ -684,6 +700,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     }
     window.addEventListener("beforeunload", () => {
       window.removeEventListener("resize", updateSquareDim);
+      window.removeEventListener("apply-settings", applySettings);
       board.removeEventListener("mouseup", blockDragMove, true);
       board.removeEventListener("mousedown", boardMouseDown, true);
     });

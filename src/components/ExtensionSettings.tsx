@@ -27,14 +27,28 @@ export const ExtensionSettings = () => {
   };
 
   const handleApplySettings = () => {
-    setAppliedMuted(isMuted);
-    setAppliedDuration(duration);
+    window.dispatchEvent(new CustomEvent("apply-settings", {
+      detail: {
+        isMuted: isMuted,
+        duration: duration
+      }
+    }))
   };
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("extension_settings_ready"))
   }, [])
-
+  useEffect(() => {
+    const handler = (event: CustomEvent) => {
+      const detail = event.detail
+      if ('appliedIsMuted' in detail) setAppliedMuted(detail.appliedIsMuted)
+      if ('appliedDuration' in detail) setAppliedDuration(detail.appliedDuration)
+    }
+    window.addEventListener("extension-settings-update", handler as EventListener)
+    return () => {
+      window.removeEventListener("extension-settings-update", handler as EventListener)
+    }
+  }, [appliedMuted, appliedDuration])
   const settingsButtonStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -226,7 +240,7 @@ export const ExtensionSettings = () => {
               <X size={20} />
             </button>
 
-            <h2 style={titleStyle}>Settings</h2>
+            <h2 style={titleStyle}>Extension Settings</h2>
             
             {/* Mute Button */}
             <div style={sectionStyle}>
