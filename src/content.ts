@@ -14,6 +14,7 @@ let lastImgSrcIndex: number = 0;
 const imgSrcs = ["blank", "sad", "angry", "goofy"];
 const imgOffsets = [15, 15, 0, 0];
 function playAudio(src: string) {
+  if (isMuted) return;
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
