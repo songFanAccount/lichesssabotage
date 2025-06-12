@@ -2,7 +2,7 @@ import { Chess } from "chess.js";
 import { createRoot } from "react-dom/client";
 import { ExtensionDisplay } from "./components/ExtensionDisplay";
 import React from "react";
-import { ExtensionSettings } from "./components/ExtensionSettings";
+import { ExtensionSettingsAndInfo } from "./components/ExtensionSettingsAndInfo";
 
 let side = 0;
 let isMuted = false;
@@ -329,7 +329,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         container.nextSibling
       );
       const settingsRoot = createRoot(settingsContainer);
-      const settingsDisplay = React.createElement(ExtensionSettings);
+      const settingsDisplay = React.createElement(ExtensionSettingsAndInfo);
       settingsRoot.render(settingsDisplay);
       await waitForSettings();
       window.addEventListener("apply-settings", applySettings);

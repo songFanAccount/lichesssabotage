@@ -80,6 +80,7 @@ export const ExtensionSettings = () => {
     }
   }, [appliedMuted, appliedDuration])
 
+  // #region style
   // Theme-based colors
   const theme = {
     bg: isDarkMode ? '#111827' : '#ffffff',
@@ -98,7 +99,6 @@ export const ExtensionSettings = () => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: '24px',
     padding: '12px',
     backgroundColor: theme.bgButton,
     color: theme.text,
@@ -267,11 +267,12 @@ export const ExtensionSettings = () => {
   };
 
   const sliderTrackColor = '#1e40af';
+  // #endregion
 
   return (
     <>
       {/* Settings Button */}
-      <div style={{width: "100%", display: "flex", alignItems: 'center',
+      <div style={{display: "flex", alignItems: 'center',
     justifyContent: 'center',}}>
 
       <button
