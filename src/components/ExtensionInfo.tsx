@@ -257,7 +257,7 @@ export const ExtensionInfo = () => {
                     <li>- Did you find the best move—but get blocked anyway?</li>
                   </ul>
                   <div style={{ marginTop: '8px' }}>
-                    <strong>Note:</strong> Book moves aren't blocked, but are still counted as "best moves."
+                    <strong>Note:</strong> Book moves and only moves aren't blocked, but are still counted as "best moves."
                   </div>
                 </div>
               </div>
