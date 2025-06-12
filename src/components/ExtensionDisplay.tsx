@@ -220,8 +220,8 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
     setTimeLeft(timerDuration);
     startTimer();
   };
-  // Calculate best moves made (sum of indices 3, 4, 5)
-  const bestMovesMade = stats[3].value + stats[4].value + stats[5].value;
+  // Calculate best moves made (sum of indices 3, 4, 5, 6)
+  const bestMovesMade = stats[3].value + stats[4].value + stats[5].value + stats[6].value;
   
   // Calculate percentages for best moves found and blocked
   const totalMoves = stats[0].value + (lastActionWasBlock ? 1 : 0);
@@ -368,7 +368,7 @@ const loadSettings = (event: Event) => {
           </div>
           {isExpanded && (
             <div style={{marginTop: '1rem'}}>
-              {stats.slice(3, 6).map((stat, index) => (
+              {stats.slice(3, 7).map((stat, index) => (
                 <div key={index + 3} style={subStatItemStyle}>
                   <div style={labelContainerStyle}>
                     {stat.icon && <span style={{...iconStyle, fontSize: '1rem'}}>{stat.icon}</span>}

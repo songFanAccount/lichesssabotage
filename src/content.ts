@@ -152,6 +152,18 @@ function incOnlyMoveCount() {
   }
   updateStats(updateDetail);
 }
+function incBookMoveCount() {
+  const moveIndex = userMoves.length;
+  if (!bestMovesFound.has(moveIndex)) {
+    bestMovesFound.add(moveIndex);
+    const numBookMoves = bestMovesFound.size;
+    updateStats({
+      numMoves: moveIndex + 1,
+      bestMovesFound: numBookMoves,
+      numBookMoves: numBookMoves,
+    });
+  }
+}
 function quitExtension() {
   console.log("Quitting extension...");
 }
@@ -256,7 +268,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
     const rm6 = await waitForRM6();
     const chessjs = new Chess();
     async function updateUsermoveToUCI(moveIndex: number, fen: string) {
-      console.log(moveIndex, fen, userMoves, bestMoves);
       const moveInSan = userMoves[moveIndex];
       const copyBoard = new Chess(fen);
       const moveObj = copyBoard.move(moveInSan);
@@ -338,20 +349,26 @@ function getXYCoordAtCoord(coord: string): [number, number] {
               if (!validMove) {
                 console.error("Invalid move...");
               } else if (isUserTurn) {
-                userMoves.push(move);
                 if (stillBookMoves) {
                   const bookMoves = await getBookMoves(chessjs.fen());
                   const isStillBook = bookMoves && bookMoves.length > 0;
-                  if (isStillBook) bestMoves.push(move);
-                  else {
+                  if (isStillBook) {
+                    bestMoves.push(move);
+                    incBookMoveCount();
+                    userMoves.push(move);
+                  } else {
                     toggleOffBook();
                     bestMoves.push(undefined);
+                    userMoves.push(move);
+                    incNumMoves();
                   }
+                } else {
+                  userMoves.push(move);
+                  incNumMoves();
                 }
                 updateStatus({
                   isUsersTurn: false,
                 });
-                incNumMoves();
               } else {
                 startOrRefreshTimer();
                 await updateBestmove(chessjs.fen());
@@ -631,6 +648,9 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       });
     }
     async function updateBestmove(fen: string) {
+      updateStatus({
+        isUsersTurn: true,
+      });
       if (stillBookMoves) {
         const bookmoves = await getBookMoves(chessjs.fen());
         if (!bookmoves || bookmoves.length === 0) toggleOffBook();
@@ -639,7 +659,6 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         }
       }
       updateStatus({
-        isUsersTurn: true,
         engineIsThinking: true,
       });
       clearBestMove();
@@ -731,18 +750,26 @@ function getXYCoordAtCoord(coord: string): [number, number] {
                   if (!validMove) {
                     console.error("Invalid move...");
                   } else if (userMadeFirstMove) {
-                    userMoves.push(move);
-                    const bookMoves = await getBookMoves(chessjs.fen());
-                    const isStillBook = bookMoves && bookMoves.length > 0;
-                    if (isStillBook) bestMoves.push(move);
-                    else {
-                      toggleOffBook();
-                      bestMoves.push(undefined);
+                    if (stillBookMoves) {
+                      const bookMoves = await getBookMoves(chessjs.fen());
+                      const isStillBook = bookMoves && bookMoves.length > 0;
+                      if (isStillBook) {
+                        bestMoves.push(move);
+                        incBookMoveCount();
+                        userMoves.push(move);
+                      } else {
+                        toggleOffBook();
+                        bestMoves.push(undefined);
+                        userMoves.push(move);
+                        incNumMoves();
+                      }
+                    } else {
+                      userMoves.push(move);
+                      incNumMoves();
                     }
                     updateStatus({
                       isUsersTurn: false,
                     });
-                    incNumMoves();
                   } else {
                     startOrRefreshTimer();
                     await updateBestmove(chessjs.fen());
