@@ -418,6 +418,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
 
     // ALL GOOD TO GO
 
+    let engineCalcTime = 0;
     const bookmovesOnLoad = await getBookMoves(chessjs.fen());
     if (!bookmovesOnLoad) return;
     let stillBookMoves = bookmovesOnLoad.length > 0; // If the game is still in book, don't block any book moves, and don't use engine to calculate best moves.
@@ -662,6 +663,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
         engineIsThinking: true,
       });
       clearBestMove();
+      const start = Date.now();
       bestMove = await getBestMove(fen);
       if (!bestMove.bestmove) return;
       const bestMoveInLan = bestMove.bestmove.split(" ")[1];
@@ -678,11 +680,20 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       bestMoveEndX = bestMoveEndXY[0];
       bestMoveEndY = bestMoveEndXY[1];
       updateMoveDestsForBlocking();
+      const end = Date.now();
       updateStatus({
         engineIsThinking: false,
       });
       const bestMoveIndex = bestMoves.length;
       bestMoves.push(bestMoveInLan);
+      engineCalcTime += end - start;
+      window.dispatchEvent(
+        new CustomEvent("avg-calc-time", {
+          detail: {
+            avgCalcTime: engineCalcTime / bestMoves.length,
+          },
+        })
+      );
       if (bestMoveIndex < userMoves.length) {
         updateUsermoveToUCI(bestMoveIndex, fen);
         if (

@@ -41,6 +41,7 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
   const [stillBookMoves, setStillBookMoves] = useState<boolean>(true)
   const [isUsersTurn, setIsUsersTurn] = useState<boolean>(false)
   const [engineIsThinking, setEngineIsThinking] = useState<boolean>(false)
+  const [avgCalcTime, setAvgCalcTime] = useState<number | undefined>(undefined)
   const [gameEndStatus, setGameEndStatus] = useState<string | undefined>(undefined)
   const [timeLeft, setTimeLeft] = useState(0);
   const [timerDuration, setTimerDuration] = useState<number>(3)
@@ -244,6 +245,11 @@ export const ExtensionDisplay: React.FC<ExtensionDisplayProps> = ({
     const detail = customEvent.detail
     if ('isBookMoves' in detail) setStillBookMoves(detail.isBookMoves)
   }
+  function handleAvgCalcTime(event: Event) {
+    const customEvent = event as CustomEvent
+    const detail = customEvent.detail
+    if ('avgCalcTime' in detail) setAvgCalcTime(detail.avgCalcTime)
+  }
 const loadSettings = (event: Event) => {
     const customEvent = event as CustomEvent
     const detail = customEvent.detail
@@ -255,6 +261,7 @@ const loadSettings = (event: Event) => {
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("extension_display_ready"))
     window.addEventListener("book-moves-change", handleIsBookMoves)
+    window.addEventListener("avg-calc-time", handleAvgCalcTime)
     window.addEventListener("extension-settings-load", loadSettings)
     window.addEventListener("extension-settings-update", handleSettingsUpdate)
     window.addEventListener("light-dark-mode", handleLightDarkModeChange)
@@ -263,6 +270,7 @@ const loadSettings = (event: Event) => {
     })
     return () => {
       window.removeEventListener("book-moves-change", handleIsBookMoves)
+      window.removeEventListener("avg-calc-time", handleAvgCalcTime)
       window.removeEventListener("extension-settings-load", loadSettings)
       window.removeEventListener("extension-settings-update", handleSettingsUpdate)
       window.removeEventListener("light-dark-mode", handleLightDarkModeChange)
@@ -374,8 +382,11 @@ const loadSettings = (event: Event) => {
                     {stat.icon && <span style={{...iconStyle, fontSize: '1rem'}}>{stat.icon}</span>}
                     <span style={{...labelStyle, fontSize: '0.75rem'}}>{stat.label}</span>
                   </div>
-                  <div style={{position: "relative", left: "-4px"}}>
+                  <div style={{position: "relative", left: "-4px", display: 'flex', alignItems: 'center'}}>
                     <Counter value={stat.value} fontSize={16} places={stat.value >= 10 ? [10, 1] : [1]} textColor={isDarkMode ? "white" : "#374151"}/>
+                    {index === 0 && ( // Moves found before engine
+                      <span style={percentageStyle}>{`${avgCalcTime !== undefined ? `${(avgCalcTime/1000).toFixed(2)}s` : 'N/A'}`}</span>
+                    )}
                   </div>
                 </div>
               ))}
