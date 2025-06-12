@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AboutTheDev } from './AboutTheDev'
 
 interface Theme {
   bg: string;
@@ -81,17 +82,34 @@ export const ExtensionInfo = () => {
   const popupStyle: React.CSSProperties = {
     backgroundColor: theme.bg,
     color: theme.text,
-    padding: '32px',
     borderRadius: '12px',
     maxWidth: '500px',
     width: '100%',
     maxHeight: '80vh',
-    overflowY: 'auto',
     border: `1px solid ${theme.border}`,
     boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
     fontFamily: 'system-ui, -apple-system, sans-serif',
     position: 'relative',
-    animation: 'fadeInScale 0.2s ease-out'
+    animation: 'fadeInScale 0.2s ease-out',
+    display: 'flex',
+    flexDirection: 'column'
+  };
+
+  const headerStyle: React.CSSProperties = {
+    position: 'sticky',
+    top: 0,
+    backgroundColor: theme.bg,
+    padding: '32px 32px 0 32px',
+    borderRadius: '12px 12px 0 0',
+    zIndex: 1
+  };
+
+  const contentStyle: React.CSSProperties = {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '20px 32px 32px 32px',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none'
   };
 
   const closeButtonStyle: React.CSSProperties = {
@@ -126,41 +144,15 @@ export const ExtensionInfo = () => {
     color: theme.textSecondary
   };
 
-  const featureListStyle: React.CSSProperties = {
-    listStyle: 'none',
-    padding: 0,
-    margin: 0
-  };
-
-  const featureItemStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'flex-start',
+  const contentTextStyle: React.CSSProperties = {
+    fontSize: '14px',
+    fontWeight: '400',
     marginBottom: '12px',
-    color: theme.text
-  };
-
-  const featureIconStyle: React.CSSProperties = {
-    color: isDarkMode ? '#10b981' : '#059669',
-    marginRight: '12px',
-    marginTop: '2px',
-    fontSize: '16px'
-  };
-
-  const footerStyle: React.CSSProperties = {
-    marginTop: '32px', 
-    padding: '16px', 
-    backgroundColor: theme.bgSecondary, 
-    borderRadius: '8px',
-    border: `1px solid ${theme.borderSecondary}`
-  };
-
-  const footerTextStyle: React.CSSProperties = {
-    margin: 0, 
-    color: theme.textMuted, 
-    fontSize: '14px'
-  };
+    color: theme.textSecondary
+  }
   // #endregion
 
+  // #region state funcs
   const handleButtonClick = (): void => {
     setIsPopupOpen(true);
   };
@@ -196,6 +188,7 @@ export const ExtensionInfo = () => {
     const target = e.target as HTMLButtonElement;
     target.style.color = theme.textMuted;
   };
+  // #endregion
 
   return (
     <>
@@ -210,6 +203,9 @@ export const ExtensionInfo = () => {
               opacity: 1;
               transform: scale(1);
             }
+          }
+          .no-scrollbar::-webkit-scrollbar {
+            display: none;
           }
         `}
       </style>
@@ -228,89 +224,38 @@ export const ExtensionInfo = () => {
       {isPopupOpen && (
         <div style={overlayStyle} onClick={handleOverlayClick}>
           <div style={popupStyle}>
-            <button
-              style={closeButtonStyle}
-              onClick={handleClosePopup}
-              onMouseEnter={handleCloseButtonMouseEnter}
-              onMouseLeave={handleCloseButtonMouseLeave}
-              type="button"
-              aria-label="Close popup"
-            >
-              ×
-            </button>
+            <div style={headerStyle}>
+              <button
+                style={closeButtonStyle}
+                onClick={handleClosePopup}
+                onMouseEnter={handleCloseButtonMouseEnter}
+                onMouseLeave={handleCloseButtonMouseLeave}
+                type="button"
+                aria-label="Close popup"
+              >
+                ×
+              </button>
+              <h2 style={titleStyle}>About Lichess Sabotage</h2>
+            </div>
             
-            <h2 style={titleStyle}>Extension Features</h2>
-            
-            <div style={sectionStyle}>
-              <h3 style={sectionTitleStyle}>Core Functionality</h3>
-              <ul style={featureListStyle}>
-                <li style={featureItemStyle}>
-                  <span style={featureIconStyle}>✓</span>
-                  <span>Smart content analysis and processing</span>
-                </li>
-                <li style={featureItemStyle}>
-                  <span style={featureIconStyle}>✓</span>
-                  <span>Real-time data synchronization</span>
-                </li>
-                <li style={featureItemStyle}>
-                  <span style={featureIconStyle}>✓</span>
-                  <span>Advanced search and filtering capabilities</span>
-                </li>
-                <li style={featureItemStyle}>
-                  <span style={featureIconStyle}>✓</span>
-                  <span>Customizable user interface themes</span>
-                </li>
-              </ul>
-            </div>
-
-            <div style={sectionStyle}>
-              <h3 style={sectionTitleStyle}>Productivity Tools</h3>
-              <ul style={featureListStyle}>
-                <li style={featureItemStyle}>
-                  <span style={featureIconStyle}>✓</span>
-                  <span>Keyboard shortcuts for quick actions</span>
-                </li>
-                <li style={featureItemStyle}>
-                  <span style={featureIconStyle}>✓</span>
-                  <span>Batch operations and bulk processing</span>
-                </li>
-                <li style={featureItemStyle}>
-                  <span style={featureIconStyle}>✓</span>
-                  <span>Export data in multiple formats</span>
-                </li>
-                <li style={featureItemStyle}>
-                  <span style={featureIconStyle}>✓</span>
-                  <span>Auto-save and backup functionality</span>
-                </li>
-              </ul>
-            </div>
-
-            <div style={sectionStyle}>
-              <h3 style={sectionTitleStyle}>Privacy & Security</h3>
-              <ul style={featureListStyle}>
-                <li style={featureItemStyle}>
-                  <span style={featureIconStyle}>✓</span>
-                  <span>Local data storage - no cloud dependency</span>
-                </li>
-                <li style={featureItemStyle}>
-                  <span style={featureIconStyle}>✓</span>
-                  <span>Encrypted sensitive information</span>
-                </li>
-                <li style={featureItemStyle}>
-                  <span style={featureIconStyle}>✓</span>
-                  <span>Minimal permissions required</span>
-                </li>
-                <li style={featureItemStyle}>
-                  <span style={featureIconStyle}>✓</span>
-                  <span>Regular security updates</span>
-                </li>
-              </ul>
-            </div>
-
-            <div style={footerStyle}>
-              <p style={footerTextStyle}>
-                Need help getting started? Check out our documentation or contact support for assistance.
-              </p>
+            <div style={contentStyle} className='no-scrollbar'>
+              <div style={sectionStyle}>
+                <h3 style={sectionTitleStyle}>Purpose</h3>
+                <h3 style={contentTextStyle}>This extension provides a fun challenge for players to race against the Stockfish engine in finding the best moves. As an unintentional but fortunate by-product, the extension can also be seen as a tool for users to learn whether they are making the best moves.</h3>
+              </div>
+              <div style={sectionStyle}>
+                <h3 style={sectionTitleStyle}>How it works</h3>
+                <h3 style={contentTextStyle}>In the background, your live game is tracked by a separate chess board instance. Whenever it is your turn, the board state is analysed by the Stockfish API and, once evaluated, internal code discreetly blocks you from making the best move! However, since the engine typically calculates this within 1-2 seconds, an additional timer is used to only allow Stockfish to block after x seconds.</h3>
+              </div>
+              <div style={sectionStyle}>
+                <h3 style={sectionTitleStyle}>Stats</h3>
+                <h3 style={contentTextStyle}>The extension tracks how often you are finding the best moves, as well as how fast you were! More specifically, whether you found the move before Stockfish (!!), after Stockfish but within the timer, or you found the best move but it was blocked! For simplicity, book moves aren't blocked and are still counted as the best moves.</h3>
+              </div>
+              <div style={sectionStyle}>
+                <h3 style={sectionTitleStyle}>Settings</h3>
+                <h3 style={contentTextStyle}>In the settings (below the stats), you can adjust the timer to give yourself more time to make the best moves. Unfortunately, you can also mute the boom effect..</h3>
+              </div>
+              <AboutTheDev/>
             </div>
           </div>
         </div>
