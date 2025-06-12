@@ -334,6 +334,44 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       await waitForSettings();
       window.addEventListener("apply-settings", applySettings);
     }
+    function checkIfGamesEnded() {
+      const resultWrap = rm6.querySelector("div.result-wrap");
+      if (resultWrap) {
+        const status = resultWrap.querySelector("p.status");
+        if (status) {
+          const statusText = status.textContent;
+          if (statusText) {
+            const winSide = statusText.includes("White is victorious")
+              ? 0
+              : statusText.includes("Black is victorious")
+              ? 1
+              : -1;
+            const winLoss =
+              winSide === -1 ? undefined : winSide === side ? true : false;
+            const endDisplayText =
+              winLoss !== undefined
+                ? winLoss
+                  ? "You won :("
+                  : "You lost :)"
+                : statusText.includes("Draw")
+                ? "Draw :|"
+                : statusText.includes("Game aborted")
+                ? "Game aborted"
+                : statusText.includes("Stalemate")
+                ? "Stalemate.."
+                : "Game ended: N/A";
+            window.dispatchEvent(
+              new CustomEvent("extension-status-update", {
+                detail: {
+                  gameEndStatus: endDisplayText,
+                },
+              })
+            );
+          }
+        }
+      }
+    }
+    checkIfGamesEnded();
     const movelistObserver = new MutationObserver((mutationsList) => {
       mutationsList.forEach((mutation) => {
         mutation.addedNodes.forEach(async (node) => {
@@ -705,41 +743,7 @@ function getXYCoordAtCoord(coord: string): [number, number] {
       }
     }
     const rm6observer = new MutationObserver((mutationsList) => {
-      const resultWrap = rm6.querySelector("div.result-wrap");
-      if (resultWrap) {
-        const status = resultWrap.querySelector("p.status");
-        if (status) {
-          const statusText = status.textContent;
-          if (statusText) {
-            const winSide = statusText.includes("White is victorious")
-              ? 0
-              : statusText.includes("Black is victorious")
-              ? 1
-              : -1;
-            const winLoss =
-              winSide === -1 ? undefined : winSide === side ? true : false;
-            const endDisplayText =
-              winLoss !== undefined
-                ? winLoss
-                  ? "You won :("
-                  : "You lost :)"
-                : statusText.includes("Draw")
-                ? "Draw :|"
-                : statusText.includes("Game aborted")
-                ? "Game aborted"
-                : statusText.includes("Stalemate")
-                ? "Stalemate.."
-                : "Game ended: N/A";
-            window.dispatchEvent(
-              new CustomEvent("extension-status-update", {
-                detail: {
-                  gameEndStatus: endDisplayText,
-                },
-              })
-            );
-          }
-        }
-      }
+      checkIfGamesEnded();
       if (l4x) return; // Only purpose of this observer is to observe for l4x
       mutationsList.forEach((mutation) => {
         const addedNodes = mutation.addedNodes;
