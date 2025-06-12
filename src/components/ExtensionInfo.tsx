@@ -241,19 +241,29 @@ export const ExtensionInfo = () => {
             <div style={contentStyle} className='no-scrollbar'>
               <div style={sectionStyle}>
                 <h3 style={sectionTitleStyle}>Purpose</h3>
-                <h3 style={contentTextStyle}>This extension provides a fun challenge for players to race against the Stockfish engine in finding the best moves. As an unintentional but fortunate by-product, the extension can also be seen as a tool for users to learn whether they are making the best moves.</h3>
+                <div style={contentTextStyle}>This extension offers a fun challenge: <strong>race against Stockfish</strong> to find the best move before it does. As a happy side effect, it also serves as a learning tool—helping players see whether they're making optimal choices.</div>
               </div>
               <div style={sectionStyle}>
                 <h3 style={sectionTitleStyle}>How it works</h3>
-                <h3 style={contentTextStyle}>In the background, your live game is tracked by a separate chess board instance. Whenever it is your turn, the board state is analysed by the Stockfish API and, once evaluated, internal code discreetly blocks you from making the best move! However, since the engine typically calculates this within 1-2 seconds, an additional timer is used to only allow Stockfish to block after x seconds.</h3>
+                <div style={contentTextStyle}>Behind the scenes, your live game is mirrored on a separate board. Whenever it's your turn, the current position is sent to the Stockfish API for evaluation. Once Stockfish identifies the best move, internal logic steps in to <strong>block</strong> you from playing it—but only after a delay. This delay gives you a chance to find the move yourself before it's too late.</div>
               </div>
               <div style={sectionStyle}>
                 <h3 style={sectionTitleStyle}>Stats</h3>
-                <h3 style={contentTextStyle}>The extension tracks how often you are finding the best moves, as well as how fast you were! More specifically, whether you found the move before Stockfish (!!), after Stockfish but within the timer, or you found the best move but it was blocked! For simplicity, book moves aren't blocked and are still counted as the best moves.</h3>
+                <div style={contentTextStyle}>
+                  The extension tracks how often you find the best move, and how quickly:
+                  <ul style={{ marginTop: '8px', paddingLeft: '16px' }}>
+                    <li>- Did you find it <strong>before</strong> Stockfish?</li>
+                    <li>- <strong>After</strong> Stockfish but still within the timer?</li>
+                    <li>- Did you find the best move—but get blocked anyway?</li>
+                  </ul>
+                  <div style={{ marginTop: '8px' }}>
+                    <strong>Note:</strong> Book moves aren't blocked, but are still counted as "best moves."
+                  </div>
+                </div>
               </div>
               <div style={sectionStyle}>
                 <h3 style={sectionTitleStyle}>Settings</h3>
-                <h3 style={contentTextStyle}>In the settings (below the stats), you can adjust the timer to give yourself more time to make the best moves. Unfortunately, you can also mute the boom effect..</h3>
+                <div style={contentTextStyle}>In the settings (below the stats), you can adjust the delay timer to give yourself more time to beat Stockfish. Unfortunately, you can also mute the <em>boom</em> effect..</div>
               </div>
               <AboutTheDev/>
             </div>
